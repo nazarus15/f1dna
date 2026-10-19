@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""Build data.json + index.html for the Formula 1 DNA league site.
+Inputs (in this folder): raw_teams.json, drivers.json, sched.json
+"""
+import json, datetime, sys, os
+H = os.path.dirname(os.path.abspath(__file__))
+rd = lambda f: json.load(open(os.path.join(H, f), encoding='utf-8'))
+
+teams = rd('raw_teams.json')
+drivers = rd('drivers.json')      # {gd: [player,...]}
+fixtures = rd('sched.json')       # list of fixtures
+
+ISO = {'Australia':'AU','China':'CN','Japan':'JP','Bahrain':'BH','Saudi Arabia':'SA','USA':'US','United States':'US','Canada':'CA',
+ 'Monaco':'MC','Spain':'ES','Austria':'AT','Great Britain':'GB','United Kingdom':'GB','Belgium':'BE','Hungary':'HU','Netherlands':'NL',
+ 'Italy':'IT','Azerbaijan':'AZ','Singapore':'SG','Mexico':'MX','Brazil':'BR','Qatar':'QA','Abu Dhabi':'AE','United Arab Emirates':'AE',
+ 'Las Vegas':'US','Miami':'US','Malaysia':'MY','Portugal':'PT','Turkey':'TR','France':'FR','Germany':'DE','Russia':'RU','Argentina':'AR','South Africa':'ZA','Thailand':'TH','Korea':'KR'}
+SHORT = {'AU':'AUS','CN':'CHN','JP':'JPN','BH':'BHR','SA':'SAU','US':'USA','CA':'CAN','MC':'MON','ES':'ESP','AT':'AUT','GB':'GBR','BE':'BEL',
+ 'HU':'HUN','NL':'NED','IT':'ITA','AZ':'AZE','SG':'SGP','MX':'MEX','BR':'BRA','QA':'QAT','AE':'ABU','MY':'MAL','PT':'POR','TR':'TUR',
+ 'FR':'FRA','DE':'GER','RU':'RUS','AR':'ARG','ZA':'RSA','TH':'THA','KR':'KOR'}
+flag = lambda iso: ''.join(chr(0x1F1E6 + ord(c) - 65) for c in iso) if iso and len(iso) == 2 else ''
+SESS_UA = {'Qualifying':'Кваліфікація','Race':'Гонка','Sprint Qualifying':'Спринт-кв.','Sprint':'Спринт'}
+
+# forward-fill team value / budget on races where no transfers were saved (API returns null)
+for t in teams:
+    prev = None
+    for m in sorted(t.get('r', {}), key=int):
+        rr = t['r'][m]
+        if rr[4] is None and prev: rr[4] = prev[4]
+        if rr[6] is None and prev: rr[6] = prev[6]
+        if rr[5] is None and prev: rr[5] = prev[5]
+        prev = rr
+
+done_md = set()
+for t in teams:
+    for m in (t.get('o') or {}).get('md', {}): done_md.add(int(m))
+    for m in t.get('r', {}): done_md.add(int(m))
+
+races = {}
+for f in fixtures:
+    g = int(f['GamedayId'])
+    r = races.setdefault(g, {'r': g, 'sessions': []})
+    r['name'] = f['MeetingName']; r['loc'] = f.get('MeetingLocation') or f.get('CircuitLocation')
+    iso = ISO.get(f.get('CountryName'), ISO.get(f.get('CircuitLocation'), ''))
+    r['flag'] = f'<span class="flag">{flag(iso)}</span>' if iso else ''
+    r['short'] = {'Miami Grand Prix':'MIA','Las Vegas Grand Prix':'LVG','Barcelona Grand Prix':'BCN'}.get(f['MeetingName']) or SHORT.get(iso, (f.get('CountryName') or '')[:3].upper())
+    r['sessions'].append({'n': SESS_UA.get(f['SessionName'], f['SessionName']), 't': f['SessionStartDateISO8601'], 'e': f.get('SessionEndDateISO8601')})
+    if 'Sprint' in f['SessionType']: r['sprint'] = True
+for r in races.values():
+    r['sessions'].sort(key=lambda s: s['t'])
+    r['start'] = r['sessions'][0]['t']; r['end'] = r['sessions'][-1]['e'] or r['sessions'][-1]['t']
+    r['deadline'] = r['sessions'][0]['t']
+    r['done'] = r['r'] in done_md
+    for s in r['sessions']: s.pop('e', None)
+races = [races[k] for k in sorted(races)]
+
+players = {}
+for gd in sorted(drivers, key=int):
+    for p in drivers[gd] or []:
+        players[str(p['PlayerId'])] = {'t': p.get('DriverTLA') or p['DisplayName'][:3].upper(), 'n': p['FUllName'],
+            'team': p.get('TeamName') or '', 'k': int(p['Skill']), 'v': p['Value']}
+# per-race fantasy points of each player (from that gameday feed)
+ppts = {}
+for gd, arr in drivers.items():
+    if int(gd) in done_md and arr:
+        ppts[gd] = {str(p['PlayerId']): float(p.get('GamedayPoints') or 0) for p in arr}
+
+me = [f"{t['g']}|{t['no']}" for t in teams if t['u'].strip().lower() == 'nazarii palii']
+
+data = {'league': {'id': 6296404, 'name': 'Formula 1 DNA', 'size': len(teams)},
+        'updated': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
+        'races': races, 'players': players, 'ppts': ppts, 'teams': teams, 'me': me}
+js = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+open(os.path.join(H, 'data.json'), 'w', encoding='utf-8').write(js)
+tpl = open(os.path.join(H, 'template.html'), encoding='utf-8').read()
+out = tpl.replace('/*__DATA__*/null', js.replace('</', '<\\/'))
+open(os.path.join(H, 'index.html'), 'w', encoding='utf-8').write(out)
+
+# sanity report
+missing_r = sum(1 for t in teams for m in done_md if str(m) not in t['r'])
+missing_o = sum(1 for t in teams if not t.get('o'))
+bad = [t['n'] for t in teams if t.get('o') and sum(t['o']['md'].values()) != t['p']]
+print(f"teams={len(teams)} races_done={sorted(done_md)} players={len(players)} me={me}")
+print(f"missing race records={missing_r} missing season records={missing_o}")
+print(f"sum(md)!=total for {len(bad)} teams: {bad[:5]}")
+print(f"index.html {len(out)//1024} KB")

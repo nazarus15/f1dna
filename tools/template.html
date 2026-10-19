@@ -1,0 +1,555 @@
+<title>Formula 1 DNA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Color+Emoji&display=swap">
+<style>
+/* Layout: timing-tower — a sticky pit-wall header, then one dense working panel per tab; sector colours carry meaning (purple = best in league, green = gain, amber = penalty). */
+:root{
+  --bg:#eef0f3; --panel:#ffffff; --panel-2:#f5f6f8; --line:#dde1e7; --line-2:#c9ced6;
+  --fg:#141821; --fg-2:#4a5262; --fg-3:#7c8496;
+  --accent:#d6202b; --accent-ink:#ffffff;
+  --purple:#8b3fd9; --green:#14a05b; --amber:#c98a07; --red:#d6202b;
+  --purple-bg:#f1e8fc; --green-bg:#e3f5ec; --amber-bg:#fbf1dc; --red-bg:#fbe6e7;
+  --me:#fff7d6; --me-line:#e8c64a;
+  --f-display:"Saira Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1218; --panel:#171b23; --panel-2:#1d222c; --line:#272d39; --line-2:#343b4a;
+  --fg:#e8ebf1; --fg-2:#a9b0bf; --fg-3:#737b8d;
+  --accent:#ff3b46; --accent-ink:#ffffff;
+  --purple:#b27cff; --green:#3ccf86; --amber:#f0b43a; --red:#ff5a63;
+  --purple-bg:#2a1f3d; --green-bg:#15301f; --amber-bg:#352a12; --red-bg:#3a1a1d;
+  --me:#2c2814; --me-line:#8d7420; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f1218; --panel:#171b23; --panel-2:#1d222c; --line:#272d39; --line-2:#343b4a;
+  --fg:#e8ebf1; --fg-2:#a9b0bf; --fg-3:#737b8d;
+  --accent:#ff3b46; --accent-ink:#ffffff;
+  --purple:#b27cff; --green:#3ccf86; --amber:#f0b43a; --red:#ff5a63;
+  --purple-bg:#2a1f3d; --green-bg:#15301f; --amber-bg:#352a12; --red-bg:#3a1a1d;
+  --me:#2c2814; --me-line:#8d7420; color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.flag{font-family:"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;font-style:normal;font-weight:400;letter-spacing:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));
+  background:var(--panel);border-bottom:1px solid var(--line)}
+.top-in{max-width:1240px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:8px}
+.brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{display:flex;align-items:baseline;gap:8px}
+.logo b{font-family:var(--f-display);font-weight:800;font-size:26px;letter-spacing:.01em;text-transform:uppercase;line-height:1}
+.logo b i{font-style:normal;color:var(--accent)}
+.logo span{font-family:var(--f-mono);font-size:12px;color:var(--fg-3)}
+.stamp{margin-left:auto;font-size:12px;color:var(--fg-3);display:flex;gap:10px;align-items:center}
+.stamp a{color:var(--fg-2)}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{background:none;border:0;padding:8px 12px 10px;font-family:var(--f-display);font-weight:600;font-size:16px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--fg-3);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav.tabs button:hover{color:var(--fg)}
+
+section.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+h2{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:.02em;text-transform:uppercase;margin:0;text-wrap:balance;line-height:1.1}
+h3{font-family:var(--f-display);font-weight:600;font-size:16px;letter-spacing:.05em;text-transform:uppercase;margin:0;color:var(--fg-2)}
+.sub{color:var(--fg-3);font-size:13px;margin:0}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.grid2>*{min-width:0}
+
+/* next race strip */
+.next{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center}
+.cd{display:flex;gap:6px}
+.cd div{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:54px;text-align:center}
+.cd b{display:block;font-family:var(--f-mono);font-size:24px;font-weight:700;line-height:1.1}
+.cd small{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-3)}
+.gp b{font-family:var(--f-display);font-size:22px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;display:block;line-height:1.1}
+.gp span{color:var(--fg-3);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.sess{display:flex;gap:0;flex-wrap:wrap;justify-content:flex-end}
+.sess div{padding:4px 12px;border-left:1px solid var(--line);text-align:center}
+.sess div:first-child{border-left:0}
+.sess b{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-2)}
+.sess span{font-family:var(--f-mono);font-size:12px}
+@media (max-width:820px){.next{grid-template-columns:1fr}.sess{justify-content:flex-start}.sess div{border-left:0;padding:4px 10px 4px 0}}
+
+/* controls */
+.ctrl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.inp{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;color:var(--fg);min-width:0}
+input.inp{flex:1 1 220px;max-width:320px}
+select.inp{cursor:pointer}
+.tog{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tog button{background:var(--panel-2);border:0;padding:7px 12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--fg-2)}
+.tog button[aria-pressed="true"]{background:var(--fg);color:var(--panel)}
+.btn{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:13px;font-weight:600}
+.btn:hover{border-color:var(--line-2)}
+.count{margin-left:auto;font-size:12px;color:var(--fg-3)}
+
+/* race strip */
+.races{display:flex;gap:4px;overflow-x:auto;padding-bottom:4px}
+.races button{flex:0 0 auto;border:1px solid var(--line);background:var(--panel-2);border-radius:8px;padding:5px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;min-width:48px}
+.races button b{font-family:var(--f-mono);font-size:11px;color:var(--fg-3);font-weight:500}
+.races button span{font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.03em}
+.races button[aria-pressed="true"]{background:var(--fg);border-color:var(--fg)}
+.races button[aria-pressed="true"] b,.races button[aria-pressed="true"] span{color:var(--panel)}
+.races button:disabled{opacity:.4;cursor:default}
+
+/* tables */
+.tw{overflow-x:auto;margin-inline:-16px;padding-inline:16px}
+table.t{border-collapse:collapse;width:100%;min-width:980px}
+table.t.narrow{min-width:620px}
+.t th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-3);font-weight:600;text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+.t th.r,.t td.r{text-align:right}
+.t th.sortable{cursor:pointer}
+.t th.sortable:hover{color:var(--fg)}
+.t td{padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.t tr.me td{background:var(--me)}
+.t tr.me td:first-child{box-shadow:inset 3px 0 0 var(--me-line)}
+.t tr.click{cursor:pointer}
+.t tr.click:hover td{background:var(--panel-2)}
+.t tr.me.click:hover td{background:var(--me)}
+.pos{font-family:var(--f-display);font-weight:700;font-size:20px;line-height:1;width:34px}
+.pos.p1{color:var(--purple)}
+.tr{font-family:var(--f-mono);font-size:11px;white-space:nowrap}
+.up{color:var(--green)} .dn{color:var(--red)} .mut{color:var(--fg-3)}
+.tm b{display:block;font-weight:700;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tm span{font-size:12px;color:var(--fg-3)}
+.big{font-family:var(--f-mono);font-weight:700;font-size:15px}
+.gap{font-family:var(--f-mono);font-size:11px;color:var(--fg-3)}
+
+/* lineup badges */
+.lu{display:flex;gap:3px;flex-wrap:nowrap}
+.pl{position:relative;display:inline-flex;align-items:center;justify-content:center;height:24px;min-width:38px;padding:0 5px;border-radius:5px;
+  font-family:var(--f-mono);font-size:10.5px;font-weight:700;color:#fff;background:var(--tc,#777);letter-spacing:.02em;white-space:nowrap}
+.pl.c{border-radius:12px;min-width:44px}
+.pl em{position:absolute;top:-6px;right:-5px;font-style:normal;font-size:9px;line-height:1;padding:2px 3px;border-radius:4px;background:var(--fg);color:var(--panel)}
+.pl em.x3{background:var(--purple);color:#fff}
+
+/* chips */
+.chips{display:flex;gap:3px}
+.chip{font-family:var(--f-mono);font-size:10px;font-weight:700;padding:3px 4px;border-radius:4px;border:1px solid var(--line);color:var(--fg-3);line-height:1}
+.chip.used{background:var(--fg);color:var(--panel);border-color:var(--fg)}
+.cp{display:inline-block;font-family:var(--f-mono);font-size:11px;font-weight:700;padding:3px 6px;border-radius:5px;background:var(--purple-bg);color:var(--purple);white-space:nowrap}
+.pen{display:block;font-size:11px;color:var(--amber);font-family:var(--f-mono)}
+.best{color:var(--purple)}
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:var(--panel-2);color:var(--fg-2);border:1px solid var(--line)}
+.tag.sp{background:var(--amber-bg);color:var(--amber);border-color:transparent}
+.tag.nx{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.tag.dn{background:var(--green-bg);color:var(--green);border-color:transparent}
+
+/* detail row */
+tr.det td{background:var(--panel-2);padding:12px}
+.det-in{display:flex;flex-direction:column;gap:10px}
+.mini{border-collapse:collapse;width:100%}
+.mini th,.mini td{padding:5px 8px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;white-space:nowrap}
+.mini th{color:var(--fg-3);font-weight:600;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+.mini td.r,.mini th.r{text-align:right}
+
+/* stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile small{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-3);font-weight:600}
+.tile b{font-family:var(--f-mono);font-size:20px;font-weight:700;line-height:1.2}
+.tile span{font-size:12px;color:var(--fg-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile.purple{background:var(--purple-bg);border-color:transparent}
+.tile.purple b{color:var(--purple)}
+
+/* bars */
+.bars{display:flex;flex-direction:column;gap:5px}
+.bar{display:grid;grid-template-columns:120px 1fr 92px;gap:8px;align-items:center;font-size:12px}
+.bar .lb{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.bar .lb i{width:8px;height:8px;border-radius:2px;flex:0 0 8px;background:var(--tc)}
+.bar .tr2{height:14px;background:var(--panel-2);border-radius:3px;overflow:hidden}
+.bar .tr2 div{height:100%;background:var(--tc,var(--fg-2));border-radius:3px}
+.bar .v{font-family:var(--f-mono);text-align:right;color:var(--fg-2)}
+
+/* heat matrix */
+.heat{border-collapse:collapse;font-family:var(--f-mono);font-size:11px}
+.heat th{font-weight:500;color:var(--fg-3);padding:4px 5px;text-align:center}
+.heat th.l{text-align:left;font-family:var(--f-body);font-weight:700;color:var(--fg-2)}
+.heat td{padding:0;text-align:center;width:34px;height:26px;border:1px solid var(--panel)}
+.heat td div{width:100%;height:100%;display:flex;align-items:center;justify-content:center;border-radius:3px}
+
+/* svg chart */
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--fg-3);font-family:var(--f-mono);font-size:10px}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:3px;border-radius:2px;background:var(--c)}
+
+/* rivals */
+.rv-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.rv{border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--panel);border-top:4px solid var(--c);min-width:0}
+.rv-h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.rv-h b{font-weight:700;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rv-h span{font-size:12px;color:var(--fg-3)}
+.rv-h .pos{width:auto}
+.rv-k{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.rv-k div{background:var(--panel-2);border-radius:6px;padding:6px 8px}
+.rv-k small{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-3)}
+.rv-k b{font-family:var(--f-mono);font-size:14px}
+.rv-x{background:none;border:0;cursor:pointer;color:var(--fg-3);font-size:18px;line-height:1;padding:0 2px}
+.picker{position:relative}
+.picker ul{position:absolute;z-index:4;top:100%;left:0;right:0;max-height:280px;overflow:auto;background:var(--panel);border:1px solid var(--line-2);border-radius:8px;margin:4px 0 0;padding:4px;list-style:none;min-width:260px}
+.picker li{padding:6px 8px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.picker li:hover,.picker li.on{background:var(--panel-2)}
+
+/* calendar */
+.cal{display:flex;flex-direction:column}
+.cal-r{display:grid;grid-template-columns:44px 30px minmax(0,1.3fr) 150px minmax(0,1fr) 92px;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.cal-r.nx{background:var(--panel-2);border-radius:8px}
+.cal-r .rn{font-family:var(--f-mono);font-size:12px;color:var(--fg-3)}
+.cal-r .fl{font-size:20px;line-height:1}
+.cal-r .nm b{display:block;font-weight:700}
+.cal-r .nm span{font-size:12px;color:var(--fg-3)}
+.cal-r .dt{font-family:var(--f-mono);font-size:12px;color:var(--fg-2);white-space:nowrap}
+.cal-r .wn{font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-r .wn b{font-weight:700}
+@media (max-width:720px){.cal-r{grid-template-columns:36px 26px minmax(0,1fr) 64px}.cal-r .dt,.cal-r .wn{grid-column:3/5}}
+.foot{font-size:12px;color:var(--fg-3);text-align:center;padding-top:8px}
+.empty{padding:24px;text-align:center;color:var(--fg-3)}
+@media (prefers-reduced-motion:no-preference){.fade{animation:fd .25s ease}@keyframes fd{from{opacity:.4}to{opacity:1}}}
+</style>
+
+<header class="top"><div class="top-in">
+  <div class="brand">
+    <div class="logo"><b>Formula 1 <i>DNA</i></b><span>F1 Fantasy · 2026</span></div>
+    <div class="stamp"><span id="upd"></span><a href="https://fantasy.formula1.com/en/leagues/leaderboard/private/6296404" target="_blank" rel="noopener">Ліга на F1 Fantasy ↗</a></div>
+  </div>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-t="board" aria-selected="true">Таблиця</button>
+    <button role="tab" data-t="results" aria-selected="false">Результати</button>
+    <button role="tab" data-t="analytics" aria-selected="false">Аналітика</button>
+    <button role="tab" data-t="rivals" aria-selected="false">Суперники</button>
+    <button role="tab" data-t="calendar" aria-selected="false">Календар</button>
+  </nav>
+</div></header>
+
+<main class="wrap" id="app" style="padding-top:16px"></main>
+<div class="wrap"><p class="foot">Неофіційний аналітичний сайт приватної ліги. Дані з F1 Fantasy, оновлюються вручну. F1, FORMULA 1 та пов'язані знаки належать Formula One Licensing B.V.</p></div>
+
+<script>
+const D = /*__DATA__*/null;
+</script>
+<script>
+(()=>{
+const $=(s,r=document)=>r.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>(n==null||isNaN(n))?'—':Number(n).toLocaleString('uk-UA').replace(/,/g,' ');
+const sg=n=>n>0?'+'+n:String(n);
+const M=v=>v==null?'—':'$'+Number(v).toFixed(1)+'M', M1=v=>v==null?'—':Number(v).toFixed(1);
+const store={get(k,d){try{const v=localStorage.getItem('dna:'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('dna:'+k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- model ---------- */
+const CH={1:['LL','Limitless'],2:['WC','Wildcard'],3:['FF','Final Fix'],4:['AP','Autopilot'],5:['NN','No Negative'],6:['X3','Extra DRS (3×)']};
+const CHORDER=[2,1,3,4,5,6];
+const OKEY={2:'wc',1:'ll',3:'ff',4:'ap',5:'nn',6:'x3'};
+const TEAMC={'mercedes':'#00a19c','ferrari':'#dc0000','mclaren':'#ff8000','red bull':'#3671c6','red bull racing':'#3671c6','aston martin':'#229971','alpine':'#0093cc','williams':'#1868db','racing bulls':'#6692ff','rb':'#6692ff','haas':'#7d8a95','haas f1 team':'#7d8a95','audi':'#a3122f','kick sauber':'#52e252','sauber':'#52e252','cadillac':'#8a8d93'};
+const P=D.players; // id -> {t,n,team,k,v}
+const tc=id=>{const p=P[id];if(!p)return '#777';return TEAMC[(p.k===2?p.n:p.team||'').toLowerCase()]||'#777'};
+const pn=id=>P[id]?P[id].t:id;
+const MDS=D.races.filter(r=>r.done).map(r=>r.r);
+const LAST=MDS[MDS.length-1];
+const ME=new Set(D.me||[]);
+const T=D.teams.map((t,i)=>{
+  const md={}; for(const m of MDS){const rr=t.r[m]; md[m]= (t.o&&t.o.md&&t.o.md[m]!=null)? t.o.md[m] : (rr?rr[0]:null);}
+  const chips={}; if(t.o){for(const id of CHORDER){const g=t.o[OKEY[id]]; if(g) chips[id]=g;}}
+  else {for(const m of MDS){const rr=t.r[m]; if(rr&&rr[9]) chips[rr[9]]=m;}}
+  return {...t,i,md,chips,me:ME.has(t.g+'|'+t.no)};
+});
+// cumulative + league rank after each race
+const cum={}, lrank={};
+for(const t of T){let s=0; t.cum={}; for(const m of MDS){s+=(t.md[m]||0); t.cum[m]=s;}}
+for(const m of MDS){
+  const arr=[...T].sort((a,b)=>b.cum[m]-a.cum[m]); let rk=0,prev=null;
+  arr.forEach((t,ix)=>{ if(t.cum[m]!==prev){rk=ix+1;prev=t.cum[m];} (t.lr=t.lr||{})[m]=rk; });
+  const ar2=[...T].sort((a,b)=>(b.md[m]??-1e9)-(a.md[m]??-1e9)); rk=0;prev=null;
+  ar2.forEach((t,ix)=>{ if(t.md[m]!==prev){rk=ix+1;prev=t.md[m];} (t.rr=t.rr||{})[m]=rk; });
+}
+const extra=rr=>{ if(!rr) return 0; if(rr[9]===1||rr[9]===2) return 0; return Math.max(0,(rr[7]||0)-(rr[8]||0)); };
+const lineup=(rr,fallback)=>{ const ids=rr?String(rr[13]||'').split('.').filter(Boolean):(fallback||'').split('.').filter(Boolean);
+  let ff=rr&&rr[14]?String(rr[14]):null; const list=ff&&ids.length>7? ids.filter(x=>x!==ff):ids;
+  return {ids:list.sort((a,b)=>(P[a]?.k||1)-(P[b]?.k||1)||(P[b]?.v||0)-(P[a]?.v||0)), cap:rr?String(rr[10]||''):'', mg:rr?String(rr[11]||''):''};};
+const luHTML=(rr,fb)=>{const L=lineup(rr,fb);return '<div class="lu">'+L.ids.map(id=>{const p=P[id];const c=p&&p.k===2;
+  const badge= id===L.mg?'<em class="x3">3×</em>': id===L.cap?'<em>2×</em>':'';
+  return `<span class="pl${c?' c':''}" style="--tc:${tc(id)}" title="${esc(p?p.n:id)}">${esc(pn(id))}${badge}</span>`}).join('')+'</div>';};
+const chipsHTML=t=>'<div class="chips">'+CHORDER.map(id=>`<span class="chip${t.chips[id]?' used':''}" title="${CH[id][1]}${t.chips[id]?' · R'+t.chips[id]:''}">${CH[id][0]}</span>`).join('')+'</div>';
+const chipOn=(t,m)=>{const rr=t.r[m]; if(rr&&rr[9]) return +rr[9]; for(const id of CHORDER) if(t.chips[id]===m) return id; return 0;};
+const cpHTML=id=>id?`<span class="cp" title="${CH[id][1]}">${CH[id][0]}</span>`:'<span class="mut">—</span>';
+const trHTML=d=>d>0?`<span class="tr up">▲${d}</span>`:d<0?`<span class="tr dn">▼${-d}</span>`:'<span class="tr mut">–</span>';
+const race=m=>D.races.find(r=>r.r==m);
+
+/* ---------- next race ---------- */
+function nextRaceHTML(){
+  const nx=D.races.find(r=>!r.done); if(!nx) return '';
+  const ss=(nx.sessions||[]).map(s=>`<div><b>${esc(s.n)}</b><span>${new Date(s.t).toLocaleString('uk-UA',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join('');
+  return `<section class="panel"><div class="next">
+    <div class="cd" id="cd" data-t="${nx.deadline}"></div>
+    <div class="gp"><span>Наступний етап · R${nx.r} · дедлайн складу</span><b>${nx.flag||''} ${esc(nx.name)}</b><span>${esc(nx.loc||'')}</span></div>
+    <div class="sess">${ss}</div></div></section>`;
+}
+function tick(){const el=$('#cd'); if(!el) return; const t=new Date(el.dataset.t)-Date.now();
+  const v=Math.max(0,t), d=Math.floor(v/864e5), h=Math.floor(v/36e5)%24, mi=Math.floor(v/6e4)%60, s=Math.floor(v/1e3)%60;
+  el.innerHTML=[[d,'днів'],[h,'год'],[mi,'хв'],[s,'сек']].map(([n,l])=>`<div><b>${String(n).padStart(2,'0')}</b><small>${l}</small></div>`).join('');}
+setInterval(tick,1000);
+
+/* ---------- Board ---------- */
+let bs={q:'',chip:'any',drv:'',sort:'rk',dir:1,open:new Set()};
+function board(){
+  const allD=Object.entries(P).filter(([,p])=>p.k===1).sort((a,b)=>a[1].n.localeCompare(b[1].n));
+  const allC=Object.entries(P).filter(([,p])=>p.k===2).sort((a,b)=>a[1].n.localeCompare(b[1].n));
+  return nextRaceHTML()+`<section class="panel fade">
+   <div class="row"><h2>Загальна таблиця</h2><span class="sub">після R${LAST} · ${esc(race(LAST)?.name||'')}</span></div>
+   <div class="ctrl">
+     <input class="inp" id="q" type="search" placeholder="Пошук команди або гравця" value="${esc(bs.q)}">
+     <select class="inp" id="fchip"><option value="any">Чіп на R${LAST}: будь-який</option><option value="none">Без чіпа</option>${CHORDER.map(id=>`<option value="${id}">${CH[id][1]}</option>`).join('')}</select>
+     <select class="inp" id="fdrv"><option value="">Пілот або конструктор у складі</option><optgroup label="Пілоти">${allD.map(([id,p])=>`<option value="${id}">${esc(p.n)}</option>`).join('')}</optgroup><optgroup label="Конструктори">${allC.map(([id,p])=>`<option value="${id}">${esc(p.n)}</option>`).join('')}</optgroup></select>
+     <button class="btn" id="reset">Скинути</button><span class="count" id="cnt"></span>
+   </div>
+   <div class="tw"><table class="t" id="bt"><thead><tr>
+     <th class="sortable" data-s="rk">#</th><th>Команда</th><th>Склад R${LAST}</th><th>Чіп</th>
+     <th class="r sortable" data-s="last">R${LAST}</th><th class="r sortable" data-s="p">Всього</th><th>Чіпи сезону</th>
+     <th class="r sortable" data-s="val">Вартість</th><th class="r sortable" data-s="bud">Бюджет</th></tr></thead><tbody></tbody></table></div>
+  </section>`;
+}
+function boardRows(){
+  const leader=Math.max(...T.map(t=>t.cum[LAST]||0));
+  let rows=T.filter(t=>{
+    if(bs.q){const q=bs.q.toLowerCase(); if(!(t.n.toLowerCase().includes(q)||t.u.toLowerCase().includes(q))) return false;}
+    const c=chipOn(t,LAST); if(bs.chip==='none'&&c) return false; if(bs.chip!=='any'&&bs.chip!=='none'&&c!=+bs.chip) return false;
+    if(bs.drv){const L=lineup(t.r[LAST],t.cur); if(!L.ids.includes(bs.drv)) return false;}
+    return true;});
+  const key={rk:t=>t.lr[LAST],last:t=>-(t.md[LAST]||0),p:t=>-(t.cum[LAST]||0),val:t=>-(t.r[LAST]?.[4]||0),bud:t=>-(t.r[LAST]?.[6]||0)}[bs.sort];
+  rows.sort((a,b)=>(key(a)-key(b))*bs.dir||a.lr[LAST]-b.lr[LAST]);
+  const bestRace=Math.max(...T.map(t=>t.md[LAST]||0));
+  $('#cnt').textContent=`${rows.length} з ${T.length}`;
+  $('#bt tbody').innerHTML=rows.map(t=>{const rr=t.r[LAST], prev=t.lr[MDS[MDS.length-2]]??t.lr[LAST], d=prev-t.lr[LAST];
+    const prevVal=t.r[MDS[MDS.length-2]]?.[4]; const dv=rr&&rr[4]!=null&&prevVal!=null? +(rr[4]-prevVal).toFixed(1):null;
+    const ex=extra(rr); const c=chipOn(t,LAST); const gap=(t.cum[LAST]||0)-leader;
+    const open=bs.open.has(t.i);
+    return `<tr class="click${t.me?' me':''}" data-i="${t.i}" aria-expanded="${open}">
+      <td><div class="pos${t.lr[LAST]===1?' p1':''}">${t.lr[LAST]}</div>${trHTML(d)}</td>
+      <td class="tm"><b title="${esc(t.n)}">${esc(t.n)}</b><span>${esc(t.u)}</span></td>
+      <td>${luHTML(rr,t.cur)}</td><td>${cpHTML(c)}</td>
+      <td class="r"><span class="big ${t.md[LAST]===bestRace?'best':'up'}">${t.md[LAST]!=null?sg(t.md[LAST]):'—'}</span>${ex?`<span class="pen">${ex} extra sub</span>`:''}</td>
+      <td class="r"><span class="big">${fmt(t.cum[LAST])}</span><span class="gap" style="display:block">${gap?fmt(gap):'лідер'}</span></td>
+      <td>${chipsHTML(t)}</td>
+      <td class="r num">${M(rr&&rr[4])}${dv!=null?`<span class="gap" style="display:block;color:var(--${dv>0?'green':dv<0?'red':'fg-3'})">${dv>0?'+':''}${dv}</span>`:''}</td>
+      <td class="r num">${M(rr&&rr[6])}</td></tr>`+(open?detail(t):'');}).join('')||'<tr><td colspan="9" class="empty">Нічого не знайдено. Змініть пошук або скиньте фільтри.</td></tr>';
+}
+function detail(t){
+  const rows=[...MDS].reverse().map(m=>{const rr=t.r[m];const c=chipOn(t,m);const L=lineup(rr);const ex=extra(rr);
+    const best=Math.max(...T.map(x=>x.md[m]||0));
+    return `<tr><td>${race(m)?.flag||''} R${m}</td><td class="r num ${t.md[m]===best?'best':''}">${t.md[m]??'—'}</td><td class="r num">${t.rr[m]}</td><td class="r num">${t.lr[m]}</td>
+     <td>${c?CH[c][0]:'—'}</td><td>${L.mg?pn(L.mg)+' (3×)':L.cap?pn(L.cap):'—'}</td><td class="r num">${ex?-ex*10:''}</td><td class="r num">${M(rr&&rr[4])}</td><td>${rr?luHTML(rr):''}</td></tr>`}).join('');
+  return `<tr class="det"><td colspan="9"><div class="det-in"><div class="row"><h3>Сезон команди ${esc(t.n)}</h3>
+    <button class="btn" data-rival="${t.i}">Додати в «Суперники»</button></div>
+    <div class="tw"><table class="mini"><thead><tr><th>Етап</th><th class="r">Очки</th><th class="r">Місце за етап</th><th class="r">Місце в лізі</th><th>Чіп</th><th>DRS</th><th class="r">Штраф</th><th class="r">Вартість</th><th>Склад</th></tr></thead><tbody>${rows}</tbody></table></div></div></td></tr>`;
+}
+function bindBoard(){
+  boardRows(); tick();
+  $('#fchip').value=bs.chip; $('#fdrv').value=bs.drv;
+  $('#q').oninput=e=>{bs.q=e.target.value;boardRows()};
+  $('#fchip').onchange=e=>{bs.chip=e.target.value;boardRows()};
+  $('#fdrv').onchange=e=>{bs.drv=e.target.value;boardRows()};
+  $('#reset').onclick=()=>{bs={...bs,q:'',chip:'any',drv:''};render()};
+  document.querySelectorAll('#bt th.sortable').forEach(th=>th.onclick=()=>{const s=th.dataset.s; bs.dir=bs.sort===s?-bs.dir:1; bs.sort=s; boardRows();});
+  $('#bt tbody').onclick=e=>{const rb=e.target.closest('[data-rival]'); if(rb){addRival(+rb.dataset.rival); rb.textContent='Додано'; return;}
+    const tr=e.target.closest('tr.click'); if(!tr) return; const i=+tr.dataset.i; bs.open.has(i)?bs.open.delete(i):bs.open.add(i); boardRows();};
+}
+
+/* ---------- Results ---------- */
+let rs={m:LAST,q:''};
+const raceStrip=(sel,id)=>`<div class="races" id="${id}">${D.races.map(r=>`<button data-m="${r.r}" aria-pressed="${r.r==sel}" ${r.done?'':'disabled'}><b>R${r.r}</b><span>${r.flag||''} ${esc(r.short)}</span></button>`).join('')}</div>`;
+function results(){
+  const m=rs.m, R=race(m);
+  const pts=T.map(t=>t.md[m]).filter(x=>x!=null);
+  const avg=Math.round(pts.reduce((a,b)=>a+b,0)/pts.length);
+  const sorted=[...T].sort((a,b)=>(b.md[m]??-1e9)-(a.md[m]??-1e9));
+  const top=sorted[0], low=sorted[sorted.length-1];
+  const prevM=MDS[MDS.indexOf(m)-1];
+  const climb=prevM?[...T].sort((a,b)=>(b.lr[prevM]-b.lr[m])-(a.lr[prevM]-a.lr[m]))[0]:null;
+  const caps={}; T.forEach(t=>{const L=lineup(t.r[m]); const c=L.mg||L.cap; if(c) caps[c]=(caps[c]||0)+1;});
+  const topCap=Object.entries(caps).sort((a,b)=>b[1]-a[1])[0];
+  const chipsN=T.filter(t=>chipOn(t,m)).length;
+  const me=T.filter(t=>t.me);
+  return `<section class="panel fade"><div class="row"><h2>Результати етапу</h2><span class="sub">${R?.flag||''} R${m} · ${esc(R?.name||'')}</span></div>
+   ${raceStrip(m,'rstrip')}
+   <div class="tiles">
+     <div class="tile purple"><small>Найкращий результат</small><b>${top.md[m]}</b><span>${esc(top.n)}</span></div>
+     <div class="tile"><small>Середнє в лізі</small><b>${avg}</b><span>${pts.length} команд</span></div>
+     <div class="tile"><small>Найгірший результат</small><b>${low.md[m]}</b><span>${esc(low.n)}</span></div>
+     ${climb?`<div class="tile"><small>Найбільший підйом</small><b class="up">▲${climb.lr[prevM]-climb.lr[m]}</b><span>${esc(climb.n)} → ${climb.lr[m]} місце</span></div>`:''}
+     ${topCap?`<div class="tile"><small>Найпопулярніший DRS</small><b>${esc(pn(topCap[0]))}</b><span>${Math.round(topCap[1]/T.length*100)}% команд</span></div>`:''}
+     <div class="tile"><small>Зіграно чіпів</small><b>${chipsN}</b><span>${Math.round(chipsN/T.length*100)}% команд</span></div>
+     ${me.map(t=>`<div class="tile" style="background:var(--me);border-color:var(--me-line)"><small>${esc(t.n)}</small><b>${t.md[m]??'—'}</b><span>${t.rr[m]} місце за етап · ${t.lr[m]} в лізі</span></div>`).join('')}
+   </div>
+   <div class="ctrl"><input class="inp" id="rq" type="search" placeholder="Пошук команди або гравця" value="${esc(rs.q)}"></div>
+   <div class="tw"><table class="t" id="rt"><thead><tr><th>#</th><th>Команда</th><th>Склад</th><th>Чіп</th><th class="r">Очки</th><th class="r">Всього</th><th>Зміна в лізі</th></tr></thead><tbody></tbody></table></div>
+  </section>`;
+}
+function resRows(){
+  const m=rs.m, prevM=MDS[MDS.indexOf(m)-1], best=Math.max(...T.map(t=>t.md[m]||0));
+  const q=rs.q.toLowerCase();
+  const rows=[...T].filter(t=>!q||t.n.toLowerCase().includes(q)||t.u.toLowerCase().includes(q)).sort((a,b)=>a.rr[m]-b.rr[m]||a.lr[m]-b.lr[m]);
+  $('#rt tbody').innerHTML=rows.map(t=>{const rr=t.r[m],ex=extra(rr),d=prevM?t.lr[prevM]-t.lr[m]:0;
+    return `<tr class="${t.me?'me':''}"><td><div class="pos${t.rr[m]===1?' p1':''}">${t.rr[m]}</div></td><td class="tm"><b>${esc(t.n)}</b><span>${esc(t.u)}</span></td>
+     <td>${rr?luHTML(rr):'<span class="mut">немає даних</span>'}</td><td>${cpHTML(chipOn(t,m))}</td>
+     <td class="r"><span class="big ${t.md[m]===best?'best':''}">${t.md[m]??'—'}</span>${ex?`<span class="pen">${ex} extra sub · −${ex*10}</span>`:''}</td>
+     <td class="r num">${fmt(t.cum[m])}</td><td>${trHTML(d)} <span class="mut num" style="font-size:12px">${t.lr[m]} місце</span></td></tr>`}).join('');
+}
+function bindResults(){ resRows();
+  $('#rstrip').onclick=e=>{const b=e.target.closest('button[data-m]'); if(!b||b.disabled) return; rs.m=+b.dataset.m; render();};
+  $('#rq').oninput=e=>{rs.q=e.target.value;resRows()};
+  const sel=$('#rstrip [aria-pressed="true"]'); sel&&sel.scrollIntoView({inline:'center',block:'nearest'});
+}
+
+/* ---------- Analytics ---------- */
+let as={m:'all'};
+function pickStats(ms){
+  const cnt={}, cap={}; let n=0;
+  for(const m of ms) for(const t of T){const rr=t.r[m]; if(!rr) continue; n++; const L=lineup(rr);
+    L.ids.forEach(id=>cnt[id]=(cnt[id]||0)+1); const c=L.mg||L.cap; if(c) cap[c]=(cap[c]||0)+1;}
+  return {cnt,cap,n};
+}
+function barsHTML(obj,n,filter,max=12,pts=null){
+  const arr=Object.entries(obj).filter(([id])=>filter(id)).sort((a,b)=>b[1]-a[1]).slice(0,max);
+  return '<div class="bars">'+arr.map(([id,v])=>{const pc=n?v/n*100:0; const pp=pts&&pts[id]!=null?`<span class="mut"> · ${Math.round(pts[id])} оч</span>`:'';
+    return `<div class="bar" style="--tc:${tc(id)}"><span class="lb"><i></i>${esc(P[id]?.n||id)}</span><div class="tr2"><div style="width:${pc.toFixed(1)}%"></div></div><span class="v">${pc.toFixed(0)}%${pp}</span></div>`}).join('')+'</div>';
+}
+function analytics(){
+  const ms=as.m==='all'?MDS:[+as.m];
+  const S=pickStats(ms);
+  const PP=as.m==='all'?null:(D.ppts&&D.ppts[as.m])||null;
+  const label=as.m==='all'?'весь сезон':`R${as.m} · ${race(+as.m)?.name}`;
+  // chip matrix
+  const chipRows=CHORDER.map(id=>`<tr><th class="l">${CH[id][1]}</th>${MDS.map(m=>{const c=T.filter(t=>chipOn(t,m)===id).length;
+    const a=c?Math.min(1,.15+c/20):0;return `<td title="R${m}: ${c}"><div style="background:${c?`color-mix(in srgb, var(--purple) ${Math.round(a*100)}%, transparent)`:'transparent'};color:${a>.55?'#fff':'var(--fg-2)'}">${c||''}</div></td>`}).join('')}</tr>`).join('');
+  return `<section class="panel fade"><div class="row"><h2>Аналітика ліги</h2><span class="sub">${esc(label)} · кожна команда має однакову вагу</span></div>
+   <div class="races" id="astrip"><button data-m="all" aria-pressed="${as.m==='all'}"><b>2026</b><span>Сезон</span></button>${D.races.filter(r=>r.done).map(r=>`<button data-m="${r.r}" aria-pressed="${as.m==r.r}"><b>R${r.r}</b><span>${r.flag||''} ${esc(r.short)}</span></button>`).join('')}</div>
+   <div class="grid2">
+     <div style="display:flex;flex-direction:column;gap:8px"><h3>Пілоти у складах</h3>${barsHTML(S.cnt,S.n,id=>P[id]?.k===1,14,PP)}</div>
+     <div style="display:flex;flex-direction:column;gap:16px"><div style="display:flex;flex-direction:column;gap:8px"><h3>Конструктори у складах</h3>${barsHTML(S.cnt,S.n,id=>P[id]?.k===2,11,PP)}</div>
+     <div style="display:flex;flex-direction:column;gap:8px"><h3>Кому віддають DRS (2× або 3×)</h3>${barsHTML(S.cap,S.n,()=>true,6,PP)}</div></div>
+     ${PP?'':'<p class="sub" style="grid-column:1/-1">Оберіть окремий етап, щоб побачити очки кожного пілота й конструктора на ньому.</p>'}
+   </div></section>
+   <section class="panel"><h2>Середні очки ліги по етапах</h2><p class="sub">Лінія — середнє ліги, смуга — від найгіршого до найкращого результату. Жирна точка — найкращий результат етапу.</p>
+     <div id="avgc"></div></section>
+   <section class="panel"><h2>Чіпи по етапах</h2><p class="sub">Скільки команд зіграли кожен чіп на кожному етапі.</p>
+     <div class="tw"><table class="heat"><thead><tr><th></th>${MDS.map(m=>`<th>R${m}</th>`).join('')}</tr></thead><tbody>${chipRows}</tbody></table></div></section>`;
+}
+function bindAnalytics(){
+  $('#astrip').onclick=e=>{const b=e.target.closest('button[data-m]'); if(!b) return; as.m=b.dataset.m; render();};
+  const avg=MDS.map(m=>{const v=T.map(t=>t.md[m]).filter(x=>x!=null);return {m,avg:v.reduce((a,b)=>a+b,0)/v.length,min:Math.min(...v),max:Math.max(...v)}});
+  const me=T.filter(t=>t.me);
+  $('#avgc').innerHTML=bandChart(avg,me);
+}
+
+/* ---------- charts ---------- */
+const PAL=['#d6202b','#2563eb','#14a05b','#c98a07','#8b3fd9','#0891b2','#db2777','#65748b'];
+function bandChart(avg,me){
+  const W=900,H=280,L=40,R=12,Tp=12,B=26, n=avg.length;
+  const ymax=Math.ceil(Math.max(...avg.map(a=>a.max))/100)*100, ymin=Math.min(0,Math.floor(Math.min(...avg.map(a=>a.min))/100)*100);
+  const x=i=>L+(n<2?0:i*(W-L-R)/(n-1)), y=v=>Tp+(ymax-v)*(H-Tp-B)/(ymax-ymin);
+  let g=''; for(let v=ymin;v<=ymax;v+=100){g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${v}</text>`;}
+  const band=avg.map((a,i)=>`${x(i)},${y(a.max)}`).join(' ')+' '+[...avg].reverse().map((a,j)=>`${x(n-1-j)},${y(a.min)}`).join(' ');
+  const line=avg.map((a,i)=>`${i?'L':'M'}${x(i)},${y(a.avg)}`).join('');
+  const meL=me.map((t,k)=>`<path d="${avg.map((a,i)=>`${i?'L':'M'}${x(i)},${y(t.md[a.m]||0)}`).join('')}" fill="none" stroke="var(--amber)" stroke-width="2" stroke-dasharray="${k?'2 3':'5 3'}"/>`).join('');
+  const xs=avg.map((a,i)=>`<text x="${x(i)}" y="${H-8}" text-anchor="middle">R${a.m}</text>`).join('');
+  const dots=avg.map((a,i)=>`<circle cx="${x(i)}" cy="${y(a.max)}" r="3.5" fill="var(--purple)"><title>R${a.m}: найкраще ${a.max}</title></circle><circle cx="${x(i)}" cy="${y(a.avg)}" r="2.5" fill="var(--fg)"><title>R${a.m}: середнє ${Math.round(a.avg)}</title></circle>`).join('');
+  return `<div class="tw"><svg class="chart" viewBox="0 0 ${W} ${H}" style="min-width:560px">${g}<polygon points="${band}" fill="var(--purple)" fill-opacity=".1"/>${meL}<path d="${line}" fill="none" stroke="var(--fg)" stroke-width="2"/>${dots}${xs}</svg></div>
+  <div class="legend"><span style="--c:var(--fg)"><i></i>Середнє ліги</span><span style="--c:var(--purple)"><i></i>Найкращий результат</span>${me.map(t=>`<span style="--c:var(--amber)"><i></i>${esc(t.n)}</span>`).join('')}</div>`;
+}
+function lineChart(series,{invert=false,fmtY=v=>v,height=320}={}){
+  const W=900,H=height,L=48,R=12,Tp=12,B=26, n=MDS.length;
+  const vals=series.flatMap(s=>s.v.filter(v=>v!=null)); if(!vals.length) return '<p class="empty">Немає даних</p>';
+  let ymin=Math.min(...vals), ymax=Math.max(...vals); if(ymin===ymax){ymin-=1;ymax+=1;}
+  const pad=(ymax-ymin)*.06; ymin-=pad; ymax+=pad; if(invert){ymin=Math.max(.5,ymin);}
+  const x=i=>L+(n<2?0:i*(W-L-R)/(n-1)), y=v=>invert? Tp+(v-ymin)*(H-Tp-B)/(ymax-ymin) : Tp+(ymax-v)*(H-Tp-B)/(ymax-ymin);
+  const step=niceStep((ymax-ymin)/5); let g='';
+  for(let v=Math.ceil(ymin/step)*step; v<=ymax; v+=step){g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-6}" y="${y(v)+3}" text-anchor="end">${fmtY(v)}</text>`;}
+  const xs=MDS.map((m,i)=>`<text x="${x(i)}" y="${H-8}" text-anchor="middle">R${m}</text>`).join('');
+  const ln=series.map(s=>{const pts=s.v.map((v,i)=>v==null?null:[x(i),y(v)]); let d='',pen=false; pts.forEach(p=>{if(!p){pen=false;return;} d+=(pen?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1); pen=true;});
+    const last=pts.filter(Boolean).pop(); return `<path d="${d}" fill="none" stroke="${s.c}" stroke-width="2.25" stroke-linejoin="round"/>${last?`<circle cx="${last[0]}" cy="${last[1]}" r="4" fill="${s.c}"/>`:''}`}).join('');
+  return `<div class="tw"><svg class="chart" viewBox="0 0 ${W} ${H}" style="min-width:560px">${g}${ln}${xs}</svg></div>`;
+}
+function niceStep(r){const p=Math.pow(10,Math.floor(Math.log10(r||1)));const f=r/p;return (f<1.5?1:f<3?2:f<7?5:10)*p;}
+
+/* ---------- Rivals ---------- */
+let rv={ids:store.get('rivals',null),mode:'gap',q:''};
+if(!Array.isArray(rv.ids)||!rv.ids.length){const mine=T.filter(t=>t.me).map(t=>t.i); const top=[...T].sort((a,b)=>a.lr[LAST]-b.lr[LAST]).slice(0,3).map(t=>t.i); rv.ids=[...new Set([...top,...mine])].slice(0,6);}
+function addRival(i){ if(!rv.ids.includes(i)){rv.ids=[...rv.ids,i].slice(-8); store.set('rivals',rv.ids);} }
+function rivals(){
+  const sel=rv.ids.map(i=>T[i]).filter(Boolean);
+  const cards=sel.map((t,k)=>{const c=PAL[k%PAL.length]; const v=MDS.map(m=>t.md[m]).filter(x=>x!=null); const avg=Math.round(v.reduce((a,b)=>a+b,0)/v.length);
+    const bestM=MDS.reduce((b,m)=>(t.md[m]??-1e9)>(t.md[b]??-1e9)?m:b,MDS[0]); const rr=t.r[LAST];
+    return `<article class="rv" style="--c:${c}"><div class="rv-h"><div style="min-width:0"><b>${esc(t.n)}</b><span>${esc(t.u)}</span></div>
+      <div class="row" style="gap:6px;flex-wrap:nowrap"><span class="pos">${t.lr[LAST]}</span><button class="rv-x" data-x="${t.i}" aria-label="Прибрати ${esc(t.n)}">×</button></div></div>
+      ${luHTML(rr,t.cur)}
+      <div class="rv-k"><div><small>Всього</small><b>${fmt(t.cum[LAST])}</b></div><div><small>R${LAST}</small><b>${t.md[LAST]??'—'}</b></div><div><small>Середнє</small><b>${avg}</b></div>
+      <div><small>Найкращий</small><b>${t.md[bestM]}</b></div><div><small>Вартість</small><b>${M1(rr&&rr[4])}</b></div><div><small>Бюджет</small><b>${M1(rr&&rr[6])}</b></div></div>
+      ${chipsHTML(t)}</article>`}).join('');
+  return `<section class="panel fade"><div class="row"><h2>Суперники</h2><span class="sub">Порівняй до 8 команд. Вибір зберігається в цьому браузері.</span></div>
+    <div class="ctrl"><div class="picker" style="flex:1 1 260px;max-width:360px"><input class="inp" id="rvq" type="search" style="width:100%;max-width:none" placeholder="Додати команду: пошук за назвою або гравцем" autocomplete="off"><ul id="rvl" hidden></ul></div>
+     <button class="btn" id="rvme">Мої команди + топ-3</button></div>
+    <div class="rv-cards">${cards||'<p class="empty">Додайте команду через пошук вище.</p>'}</div></section>
+    <section class="panel"><div class="row"><h2>Динаміка</h2>
+      <div class="tog" id="rvm" style="margin-left:auto">${[['gap','Відставання від лідера'],['pos','Місце в лізі'],['pts','Очки за етап'],['bud','Бюджет']].map(([k,l])=>`<button data-k="${k}" aria-pressed="${rv.mode===k}">${l}</button>`).join('')}</div></div>
+      <div id="rvc"></div><div class="legend">${sel.map((t,k)=>`<span style="--c:${PAL[k%PAL.length]}"><i></i>${esc(t.n)}</span>`).join('')}</div></section>`;
+}
+function rvChart(){
+  const sel=rv.ids.map(i=>T[i]).filter(Boolean);
+  const lead=MDS.map(m=>Math.max(...T.map(t=>t.cum[m]||0)));
+  const map={gap:t=>MDS.map((m,i)=>(t.cum[m]||0)-lead[i]), pos:t=>MDS.map(m=>t.lr[m]), pts:t=>MDS.map(m=>t.md[m]??null), bud:t=>MDS.map(m=>t.r[m]?t.r[m][6]:null)};
+  const series=sel.map((t,k)=>({c:PAL[k%PAL.length],v:map[rv.mode](t)}));
+  $('#rvc').innerHTML=lineChart(series,{invert:rv.mode==='pos',fmtY:rv.mode==='bud'?v=>'$'+v.toFixed(0)+'M':v=>Math.round(v)});
+}
+function bindRivals(){
+  rvChart();
+  const inp=$('#rvq'), ul=$('#rvl');
+  const show=()=>{const q=inp.value.toLowerCase().trim(); if(!q){ul.hidden=true;return;}
+    const res=T.filter(t=>!rv.ids.includes(t.i)&&(t.n.toLowerCase().includes(q)||t.u.toLowerCase().includes(q))).slice(0,10);
+    ul.innerHTML=res.map(t=>`<li data-i="${t.i}"><span>${esc(t.n)} <span class="mut">· ${esc(t.u)}</span></span><span class="num mut">${t.lr[LAST]}</span></li>`).join('')||'<li class="mut">Нічого не знайдено</li>'; ul.hidden=false;};
+  inp.oninput=show; inp.onfocus=show;
+  ul.onmousedown=e=>{const li=e.target.closest('li[data-i]'); if(!li) return; e.preventDefault(); addRival(+li.dataset.i); render();};
+  inp.onblur=()=>setTimeout(()=>ul.hidden=true,120);
+  document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{rv.ids=rv.ids.filter(i=>i!==+b.dataset.x); store.set('rivals',rv.ids); render();});
+  $('#rvme').onclick=()=>{rv.ids=[]; store.set('rivals',null); rv.ids=null; const mine=T.filter(t=>t.me).map(t=>t.i); const top=[...T].sort((a,b)=>a.lr[LAST]-b.lr[LAST]).slice(0,3).map(t=>t.i); rv.ids=[...new Set([...top,...mine])]; store.set('rivals',rv.ids); render();};
+  $('#rvm').onclick=e=>{const b=e.target.closest('button[data-k]'); if(!b) return; rv.mode=b.dataset.k; document.querySelectorAll('#rvm button').forEach(x=>x.setAttribute('aria-pressed',x===b)); rvChart();};
+}
+
+/* ---------- Calendar ---------- */
+function calendar(){
+  const nx=D.races.find(r=>!r.done);
+  const rows=D.races.map(r=>{let wn='';
+    if(r.done){const top=[...T].sort((a,b)=>(b.md[r.r]??-1e9)-(a.md[r.r]??-1e9))[0]; const v=T.map(t=>t.md[r.r]).filter(x=>x!=null);
+      wn=`<b>${esc(top.n)}</b> · <span class="num">${top.md[r.r]}</span> <span class="mut">· сер. ${Math.round(v.reduce((a,b)=>a+b,0)/v.length)}</span>`;}
+    const st=r.done?'<span class="tag dn">Завершено</span>':r===nx?'<span class="tag nx">Наступний</span>':'<span class="tag">Попереду</span>';
+    const d1=new Date(r.start), d2=new Date(r.end);
+    const dt=`${d1.toLocaleDateString('uk-UA',{day:'numeric',month:'short'})} – ${d2.toLocaleDateString('uk-UA',{day:'numeric',month:'short'})}`;
+    return `<div class="cal-r${r===nx?' nx':''}"><span class="rn">R${r.r}</span><span class="fl">${r.flag||''}</span>
+      <span class="nm"><b>${esc(r.name)}</b><span>${esc(r.loc||'')}${r.sprint?' · <span class="tag sp">Sprint</span>':''}</span></span>
+      <span class="dt">${dt}</span><span class="wn">${wn}</span><span>${st}</span></div>`}).join('');
+  return `<section class="panel fade"><div class="row"><h2>Календар сезону 2026</h2><span class="sub">Для завершених етапів показано переможця етапу в лізі та середній результат.</span></div><div class="cal">${rows}</div></section>`;
+}
+
+/* ---------- router ---------- */
+const VIEWS={board:[board,bindBoard],results:[results,bindResults],analytics:[analytics,bindAnalytics],rivals:[rivals,bindRivals],calendar:[calendar,()=>{}]};
+let cur=(location.hash||'').slice(1); if(!VIEWS[cur]) cur=store.get('tab','board'); if(!VIEWS[cur]) cur='board';
+function render(){ const [v,b]=VIEWS[cur]; $('#app').innerHTML=v(); b();
+  document.querySelectorAll('#tabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===cur)); }
+$('#tabs').onclick=e=>{const b=e.target.closest('button[data-t]'); if(!b) return; cur=b.dataset.t; store.set('tab',cur); render(); window.scrollTo({top:0});};
+$('#upd').textContent='Оновлено '+new Date(D.updated).toLocaleString('uk-UA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+` · після R${LAST}`;
+render();
+})();
+</script>
