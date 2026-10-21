@@ -42,7 +42,7 @@
   for (let m = 1; m <= ROUNDS + 1; m++) {
     const a = await get(`/feeds/drivers/${m}_en.json`);
     drivers[m] = (a || []).map(p => ({ PlayerId: p.PlayerId, Skill: p.Skill, Value: p.Value, TeamName: p.TeamName, FUllName: p.FUllName,
-      DisplayName: p.DisplayName, DriverTLA: p.DriverTLA, GamedayPoints: p.GamedayPoints }));
+      DisplayName: p.DisplayName, DriverTLA: p.DriverTLA, GamedayPoints: p.GamedayPoints, IsActive: p.IsActive }));
   }
   const sc = await fetch('/feeds/v2/schedule/raceday_en.json?b=' + Date.now()).then(r => r.json());
   const sched = (sc?.Data?.fixtures || []).map(f => ({ GamedayId: f.GamedayId, MeetingName: f.MeetingName, MeetingLocation: f.MeetingLocation,

@@ -57,7 +57,12 @@ players = {}
 for gd in sorted(drivers, key=int):
     for p in drivers[gd] or []:
         players[str(p['PlayerId'])] = {'t': p.get('DriverTLA') or p['DisplayName'][:3].upper(), 'n': p['FUllName'],
-            'team': p.get('TeamName') or '', 'k': int(p['Skill']), 'v': p['Value']}
+            'team': p.get('TeamName') or '', 'k': int(p['Skill']), 'v': p['Value'], 'a': 0 if str(p.get('IsActive','1'))=='0' else 1}
+# price of each player by gameday (value before that gameday)
+pval = {}
+for gd in sorted(drivers, key=int):
+    for p in drivers[gd] or []:
+        pval.setdefault(str(p['PlayerId']), {})[gd] = p['Value']
 # per-race fantasy points of each player (from that gameday feed)
 ppts = {}
 for gd, arr in drivers.items():
@@ -66,9 +71,30 @@ for gd, arr in drivers.items():
 
 me = [f"{t['g']}|{t['no']}" for t in teams if t['u'].strip().lower() == 'nazarii palii']
 
-data = {'league': {'id': 6296404, 'name': 'Formula 1 DNA', 'size': len(teams)},
+# ---- F1 Predict league (optional input predict.json) ----
+pred = None
+if os.path.exists(os.path.join(H, 'predict.json')):
+    pr = rd('predict.json')
+    users = {}
+    for m, arr in pr['lb'].items():
+        for r in arr:
+            u = users.setdefault(r['id'], {'id': r['id'], 'n': r['n'].strip(), 'u': r['u'].strip(), 'p': {}, 'a': {}, 'rk': {}})
+            if r['p'] is not None:
+                u['p'][m] = r['p']; u['a'][m] = int(r['acc']) if r['acc'] not in (None, '') else None; u['rk'][m] = r['rk']
+    def slim(q):  # options: [id, name, points, chance, position]
+        return {'no': q['no'], 't': q['t'], 'tpl': q['tpl'], 'lim': q['lim'], 'o': [[o[0], o[1], o[2]] for o in q['o']], 'a': q['a']}
+    rounds = sorted(int(m) for m in pr['lb'])
+    pred = {'league': {'id': 494410, 'name': 'Formula 1 DNA'}, 'rounds': rounds, 'users': list(users.values()),
+            'qs': {m: [slim(q) for q in pr['qs'][str(m)]] for m in rounds},
+            'bonus': [slim(q) for q in pr['qs'].get('25', [])],
+            'world': pr.get('st', {}), 'gl': pr.get('gl')}
+    for u in pred['users']:
+        s = sum(u['p'].values())
+        assert s == next(r['tp'] for r in pr['lb'][str(rounds[-1])] if r['id'] == u['id']), u['n']
+
+data = {'league': {'id': 6296404, 'name': 'Formula 1 DNA', 'size': len(teams)}, 'pred': pred,
         'updated': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
-        'races': races, 'players': players, 'ppts': ppts, 'teams': teams, 'me': me}
+        'races': races, 'players': players, 'ppts': ppts, 'pval': pval, 'teams': teams, 'me': me}
 js = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
 open(os.path.join(H, 'data.json'), 'w', encoding='utf-8').write(js)
 tpl = open(os.path.join(H, 'template.html'), encoding='utf-8').read()

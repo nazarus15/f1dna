@@ -1,0 +1,31 @@
+name: Збірка сайту
+# Запускається, коли скрипт оновлення (tools/updater.js) комітить нові дані в tools/.
+on:
+  push:
+    branches: [main]
+    paths: ['tools/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build-site
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Зібрати index.html
+        run: |
+          cd tools
+          python3 build.py
+          cp index.html ../index.html
+      - name: Закомітити зібраний сайт
+        run: |
+          git config user.name "f1dna-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then echo "Без змін"; exit 0; fi
+          git commit -m "Збірка сайту: $(git log -1 --pretty=%s)"
+          git pull --rebase origin main
+          git push

@@ -1,8 +1,18 @@
-# Інструменти сайту і постів
+# Інструменти сайту
 
-- `collect.js` — збір даних ліги в браузері (залогінений F1 Fantasy). Результат `window.__F1DNA` → зберегти `teams` у `raw_teams.json`, `drivers` у `drivers.json`, `sched` у `sched.json`.
-- `build.py` — з `raw_teams.json`, `drivers.json`, `sched.json` і `template.html` будує `index.html` (скопіювати в корінь репозиторію) та `data.json`; друкує перевірки (сума очок = загальні очки).
-- `stats.py` — рахує статистику для постів (рубрики з `F1DNA_project_guide.md`). Запуск після `build.py`.
-- `F1DNA_project_guide.md` — формат посту, правила мови, рубрики, опис даних.
+## Автоматичне оновлення
+- `updater.js` — скрипт оновлення. Запускається на сторінці **fantasy.formula1.com** або **f1predict.formula1.com** під залогіненим учасником ліги. Перевіряє, чи з'явилися нові результати, дозбирає лише нові етапи (≤ 1 запит / 0,75 с) і комітить дані в `tools/` через GitHub API.
+- Токен GitHub (fine-grained, тільки репозиторій `nazarus15/f1dna`, дозвіл **Contents: Read and write**) вводиться один раз у панелі скрипта і зберігається лише в localStorage цього сайту в цьому браузері.
+- `.github/workflows/build.yml` — після коміту даних збирає `index.html` (`build.py`) і комітить його; GitHub Pages публікує сайт.
+- Закладка (bookmarklet) для ручного запуску — створити закладку з такою адресою і натиснути її на сторінці ліги:
+  ```
+  javascript:fetch('https://raw.githubusercontent.com/nazarus15/f1dna/main/tools/updater.js?t='+Date.now()).then(r=>r.text()).then(c=>(0,eval)(c))
+  ```
+- Статуси (`window.__F1DNA_UPD.status`): `updated`, `up-to-date`, `source-pending` (F1 ще не опублікував результати), `need-token`, `need-login`, `error`.
+- На сайті з'являється плашка **Pending**, якщо етап завершився понад 3 години тому, а його результатів ще немає в даних.
 
-Оновлення після етапу: `collect.js` (можна лише новий етап через `ONLY=[n]` і злиття з наявним `raw_teams.json`) → `python3 build.py` → `cp index.html ../index.html` → коміт.
+## Файли
+- `raw_teams.json`, `drivers.json`, `sched.json` — дані F1 Fantasy; `predict.json` — дані F1 Predict.
+- `build.py` + `template.html` → `index.html` (та `data.json`), друкує перевірки.
+- `collect.js`, `collect_predict.js` — повний збір сезону з нуля (запасний варіант).
+- `stats.py` — статистика для постів; `F1DNA_project_guide.md` — формат постів.
