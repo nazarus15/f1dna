@@ -99,6 +99,14 @@ js = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
 open(os.path.join(H, 'data.json'), 'w', encoding='utf-8').write(js)
 tpl = open(os.path.join(H, 'template.html'), encoding='utf-8').read()
 out = tpl.replace('/*__DATA__*/null', js.replace('</', '<\\/'))
+# повний HTML-документ для GitHub Pages: doctype (без quirks mode), кодування, viewport, іконки-файли
+if not out.lstrip().lower().startswith('<!doctype'):
+    out = ('<!doctype html>\n<html lang="uk">\n<head>\n<meta charset="utf-8">\n'
+           '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
+           '<link rel="icon" type="image/svg+xml" href="favicon.svg">\n'
+           '<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">\n'
+           '<link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png">\n'
+           '<link rel="apple-touch-icon" href="apple-touch-icon.png">\n') + out
 open(os.path.join(H, 'index.html'), 'w', encoding='utf-8').write(out)
 
 # sanity report
