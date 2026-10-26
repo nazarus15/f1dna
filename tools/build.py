@@ -92,8 +92,25 @@ if os.path.exists(os.path.join(H, 'predict.json')):
         s = sum(u['p'].values())
         assert s == next(r['tp'] for r in pr['lb'][str(rounds[-1])] if r['id'] == u['id']), u['n']
 
+def data_time():
+    # час останньої зміни даних (git), а не час збірки; запасний варіант — зараз
+    import subprocess
+    try:
+        t = subprocess.run(['git', 'log', '-1', '--format=%cI', '--', 'raw_teams.json', 'predict.json', 'drivers.json'],
+                           cwd=H, capture_output=True, text=True, timeout=20).stdout.strip()
+        if t: return datetime.datetime.fromisoformat(t).astimezone(datetime.timezone.utc).isoformat(timespec='seconds')
+    except Exception: pass
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
+
+# на публічний сайт — лише короткий числовий id акаунта замість повного guid F1
+import copy
+teams = copy.deepcopy(teams)
+for t in teams:
+    t['g'] = str(t['g']).split('-0-')[-1]
+me = [f"{t['g']}|{t['no']}" for t in teams if t['u'].strip().lower() == 'nazarii palii']
+
 data = {'league': {'id': 6296404, 'name': 'Formula 1 DNA', 'size': len(teams)}, 'pred': pred,
-        'updated': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
+        'updated': data_time(),
         'races': races, 'players': players, 'ppts': ppts, 'pval': pval, 'teams': teams, 'me': me}
 js = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
 open(os.path.join(H, 'data.json'), 'w', encoding='utf-8').write(js)
@@ -106,7 +123,17 @@ if not out.lstrip().lower().startswith('<!doctype'):
            '<link rel="icon" type="image/svg+xml" href="favicon.svg">\n'
            '<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">\n'
            '<link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png">\n'
-           '<link rel="apple-touch-icon" href="apple-touch-icon.png">\n') + out
+           '<link rel="apple-touch-icon" href="apple-touch-icon.png">\n'
+           '<meta name="description" content="Неофіційна аналітика приватних ліг «Formula 1 DNA» у F1 Fantasy та F1 Predict: таблиці, результати етапів, суперники, рекорди сезону.">\n'
+           '<meta name="theme-color" content="#d6202b">\n'
+           '<meta property="og:type" content="website">\n'
+           '<meta property="og:site_name" content="Formula 1 DNA">\n'
+           '<meta property="og:title" content="Formula 1 DNA — аналітика ліг F1 Fantasy і F1 Predict">\n'
+           '<meta property="og:description" content="Таблиці, результати етапів, аналітика, суперники й рекорди сезону 2026.">\n'
+           '<meta property="og:url" content="https://nazarus15.github.io/f1dna/">\n'
+           '<meta property="og:image" content="https://nazarus15.github.io/f1dna/og.png">\n'
+           '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">\n'
+           '<meta name="twitter:card" content="summary_large_image">\n') + out
 open(os.path.join(H, 'index.html'), 'w', encoding='utf-8').write(out)
 
 # sanity report

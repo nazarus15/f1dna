@@ -1053,7 +1053,7 @@ function mountBars(box,{ms,vals,avg=null,best=null,mine=null,marks=null,tips,col
 
 /* ---------- my team picker ---------- */
 const modal=$('#modal'), mq=$('#mq'), ml=$('#ml');
-let pickP=false;
+let pickP=false; const askedNow={f:false,p:false};
 function listMy(){const q=mq.value.toLowerCase().trim();
   if(pickP){const arr=[...PU].sort((a,b)=>a.lr[PLAST]-b.lr[PLAST]).filter(u=>!q||u.n.toLowerCase().includes(q)||u.u.toLowerCase().includes(q));
     ml.innerHTML=arr.map(u=>`<li tabindex="0" data-my="${u.i}" class="${u===PMY?'cur':''}"><span><b>${esc(u.n)}</b> <span class="mut">· ${esc(u.u)}</span></span><span class="num mut">${u.lr[PLAST]}</span></li>`).join('')||'<li class="mut">Нічого не знайдено</li>'; return;}
@@ -1064,7 +1064,7 @@ function openPicker(p){pickP=p===true||(p!==false&&isP(cur));
   $('#msub').textContent=pickP?'Сайт порівнюватиме лігу F1 Predict з твоїм профілем: місце, очки, точність, дуелі. Вибір зберігається лише в цьому браузері.':'Сайт порівнюватиме всю лігу з твоєю командою: різниця в очках, спільні пілоти, дуелі. Вибір зберігається лише в цьому браузері.';
   $('#mclear').textContent=pickP?'Без мого профілю':'Без моєї команди';
   modal.hidden=false; mq.value=''; listMy(); setTimeout(()=>mq.focus(),30);}
-function closePicker(){modal.hidden=true; if(!pickP&&store.get('my',null)===null) store.set('my','');}
+function closePicker(){modal.hidden=true; if(!pickP&&!MY) store.set('my',''); if(pickP&&!PMY) store.set('pmy','');}
 const setPmy=u=>{store.set('pmy',u?String(u.id):''); pmyInit();};
 mq.oninput=listMy;
 mq.onkeydown=e=>{if(e.key==='Enter'){const li=$('li[data-my]',ml); if(li) li.click();}};
@@ -1263,7 +1263,7 @@ function bindSeason(){
   mountLine($('#swc'),{ms,log:true,series:[{name:'Найкраща команда ліги на етапі',color:'var(--purple)',vals:best},{name:'Медіана ліги',color:'var(--fg-3)',vals:med}].concat(MY?[{name:MY.n,color:'var(--amber)',dash:true,vals:ms.map(m=>MY.r[m]&&MY.r[m][1]?MY.r[m][1]:null)}]:[]),invert:true,fmtY:cf,
     extra:m=>{const x=T.filter(t=>t.r[m]&&t.r[m][1]).sort((a,b)=>a.r[m][1]-b.r[m][1])[0]; return x?[['Найкраща: '+x.n,'']]:[];}});
 }
-function go(tab){cur=tab; store.set('tab',cur); store.set(cur.startsWith('p-')?'ptab':'ftab',cur); render(); window.scrollTo({top:0});}
+function go(tab){cur=tab; store.set('tab',cur); store.set(cur.startsWith('p-')?'ptab':'ftab',cur); try{history.replaceState(null,'',location.pathname+location.search+'#'+cur);}catch(e){} render(); window.scrollTo({top:0});}
 
 /* ---------- Predictor (F1 Predict) ---------- */
 const PR=D.pred;
@@ -1662,10 +1662,14 @@ function bindBuilder(){
 
 /* ---------- router ---------- */
 const VIEWS={board:[board,bindBoard],team:[teamPage,bindTeam],results:[results,bindResults],analytics:[analytics,bindAnalytics],rivals:[rivals,bindRivals],season:[season,bindSeason],'p-table':[predictor,bindPredictor],'p-round':[predictor,bindPredictor],'p-dyn':[predictor,bindPredictor],'p-acc':[predictor,bindPredictor],'p-player':[playerP,bindPlayerP],'p-rec':[predictor,bindPredictor],'p-duo':[predictor,bindPredictor],/* builder:[builder,bindBuilder] — вкладка прихована */calendar:[calendar,()=>{}]};
-let cur=(location.hash||'').slice(1); if(!VIEWS[cur]) cur=store.get('tab','board'); if(cur==='predictor') cur='p-table'; if(!VIEWS[cur]) cur='board';
+let cur=(location.hash||'').slice(1); if(cur==='predictor') cur='p-table'; if(!VIEWS[cur]) cur=store.get('tab','board'); if(cur==='predictor') cur='p-table'; if(!VIEWS[cur]) cur='board';
 const isP=t=>t.startsWith('p-');
 function render(){ hideTip(); $('#app').onclick=null; const [v,b]=VIEWS[cur]; $('#app').innerHTML=v(); b();
   const pm=isP(cur); document.body.classList.toggle('mode-p',pm);
+  // перший візит у режим (або збережена команда/профіль більше не існує) — попросити обрати
+  if(modal.hidden&&!askedNow[pm?'p':'f']){const sv=store.get(pm?'pmy':'my',null);
+    const need=pm?(!PMY&&sv===null)||(!PMY&&sv!==''&&sv!==null):(!MY&&!MYINIT.qp&&(sv===null||sv!==''));
+    if(need){askedNow[pm?'p':'f']=true; setTimeout(()=>openPicker(pm),0);}}
   $('#tabs').hidden=pm; $('#ptabs').hidden=!pm; if(pm) pmyInit(); updMyBtn();
   $$('.modesw button').forEach(x=>x.setAttribute('aria-pressed',(x.dataset.mode==='p')===pm));
   $('#logosub').textContent=pm?'F1 Predict · 2026':'F1 Fantasy · 2026'; $('#extn').textContent=pm?'F1 Predict':'F1 Fantasy';
@@ -1683,6 +1687,5 @@ $$('.modesw button').forEach(b=>b.onclick=()=>{const p=b.dataset.mode==='p'; if(
 const MYINIT=initMy();
 if(!Array.isArray(store.get('rivals',null))) rv.ids=defaultRivals();
 render();
-if(!MYINIT.qp&&!MYINIT.asked) openPicker();
 })();
 </script>
