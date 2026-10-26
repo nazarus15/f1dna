@@ -55,6 +55,7 @@
   const get = async u => {
     for (let k = 0; k < 6; k++) {
       const r = await fetch(u + (u.includes('?') ? '&' : '?') + 'buster=' + Date.now());
+      if (r.status === 401) throw Object.assign(new Error('Сесія F1 завершилась — увійдіть у свій акаунт на цьому сайті і запустіть ще раз.'), { login: true });
       if (r.status === 403 || r.status === 429) { log('F1 обмежує запити, пауза 60 с…'); await sleep(60000); continue; }
       await sleep(750); if (!r.ok) return null;
       const x = await r.json(); return x?.Data?.Value ?? x?.Value ?? null;
@@ -80,11 +81,15 @@
     const old = Object.fromEntries(oldTeams.map(t => [key(t), t]));
     const storedMax = Math.max(0, ...oldTeams.flatMap(t => Object.keys(t.r || {}).map(Number)));
     // season summaries of all teams (also reveal which rounds already have points)
+    // перевірка входу: сервіси команд доступні лише залогіненому учаснику
+    if (!(await get(`/services/user/opponentteam/opponentgamedayget/1/${lb[0].user_guid}/${lb[0].team_no}`))) return finish('need-login', 'Не вдалося прочитати команди суперників. Увійдіть у F1 Fantasy і запустіть ще раз.');
     const sums = [];
     for (const [k, t] of lb.entries()) { sums.push(await get(`/services/user/opponentteam/opponentgamedayget/1/${t.user_guid}/${t.team_no}`)); if (k % 20 === 19) log(`Підсумки команд: ${k + 1}/${lb.length}`); }
     const now = Date.now();
     const withPts = new Set(sums.flatMap(o => Object.entries(o?.mdDetails || {}).filter(([, b]) => b && b.pts != null).map(([a]) => +a)));
+    if (sums.filter(Boolean).length < lb.length * 0.9) return finish('error', 'F1 не віддав підсумки частини команд — дані не закомічено, спробуйте пізніше.');
     const ROUND = Math.max(0, ...[...withPts].filter(m => ended[m] && ended[m] + 2 * 3600e3 < now));
+    if (ROUND < storedMax) return finish('error', `F1 повернув етапи лише до R${ROUND}, а на сайті вже R${storedMax} — дані не закомічено.`);
     const sameTotals = lb.length === oldTeams.length && lb.every(t => old[key(t)] && old[key(t)].p === t.cur_points);
     if (ROUND <= storedMax && sameTotals) {
       const nextDone = Object.keys(ended).map(Number).filter(m => m > storedMax && ended[m] + 2 * 3600e3 < now);
@@ -166,7 +171,7 @@
       if (/fantasy\.formula1\.com$/.test(location.hostname)) await fantasy();
       else if (/f1predict\.formula1\.com$/.test(location.hostname)) await predict();
       else finish('error', 'Запускайте на fantasy.formula1.com або f1predict.formula1.com');
-    } catch (e) { finish('error', String(e.message || e)); }
+    } catch (e) { finish(e.login ? 'need-login' : 'error', String(e.message || e)); }
   }
   run();
 })();
