@@ -116,6 +116,10 @@ js = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
 open(os.path.join(H, 'data.json'), 'w', encoding='utf-8').write(js)
 tpl = open(os.path.join(H, 'template.html'), encoding='utf-8').read()
 out = tpl.replace('/*__DATA__*/null', js.replace('</', '<\\/'))
+# Google Analytics: Measurement ID з tools/ga_id.txt (якщо файлу немає — аналітика вимкнена)
+ga_path = os.path.join(H, 'ga_id.txt')
+ga_id = open(ga_path).read().strip() if os.path.exists(ga_path) else ''
+out = out.replace('/*__GA_ID__*/', ga_id)
 # повний HTML-документ для GitHub Pages: doctype (без quirks mode), кодування, viewport, іконки-файли
 if not out.lstrip().lower().startswith('<!doctype'):
     out = ('<!doctype html>\n<html lang="uk">\n<head>\n<meta charset="utf-8">\n'
