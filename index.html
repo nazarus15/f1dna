@@ -1143,7 +1143,7 @@ document.addEventListener('click',e=>{const a=e.target.closest('[data-team]'); i
   if(e.target.closest('[data-pick-my]')) openPicker();});
 
 /* ---------- Team page ---------- */
-let tp={i:null};
+let tp={i:null,m:null};
 const sd=a=>{const m=a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/a.length);};
 function teamStats(t){
   const ms=MDS.filter(m=>t.md[m]!=null), v=ms.map(m=>t.md[m]);
@@ -1160,11 +1160,26 @@ function teamPage(){
   const lgAvg=MDS.reduce((s,m)=>s+STAT[m].avg,0)/MDS.length;
   const tile=(k,v,sub,cls,tip)=>`<div class="tile ${cls||''}"${tip||''}><small>${k}</small><b>${v}</b>${sub?`<span>${sub}</span>`:''}</div>`;
   const h2h=MY&&MY!==t;
+  const sm=tp.m&&MDS.includes(tp.m)?tp.m:LAST, sr=t.r[sm], spv=MDS[MDS.indexOf(sm)-1], sd=spv&&t.md[spv]!=null?t.lr[spv]-t.lr[sm]:0;
+  const sc_=chipOn(t,sm), sdr=drsOf(t,sm), sex=extra(sr), sdp=sdr?ppts(sm,sdr.id):null;
+  const stageTiles=t.md[sm]==null?'<p class="empty" style="margin:0">Команда не грала на цьому етапі.</p>':`<div class="tiles">
+      ${tile(`Очки · R${sm}`,fmt(t.md[sm]),`${t.md[sm]===STAT[sm].max?'найкращий результат етапу · ':''}середнє ліги ${Math.round(STAT[sm].avg)}`,t.md[sm]===STAT[sm].max?'purple':'')}
+      ${tile('Місце за етап',`${t.rr[sm]}`,`з ${STAT[sm].n} ${komand(STAT[sm].n)}`)}
+      ${tile(`Місце в лізі після R${sm}`,t.lr[sm],`${fmt(t.cum[sm])} ${ochok(t.cum[sm])}${spv?(sd>0?` · ▲${sd} за етап`:sd<0?` · ▼${-sd} за етап`:' · без змін'):''}`)}
+      ${tile('Світове місце за етап',sr&&sr[1]?fmt(sr[1]):'—','серед усіх гравців F1 Fantasy')}
+      ${tile('DRS',sdr?esc(pn(sdr.id))+` ${sdr.mult}×`:'—',sdr&&sdp!=null?`${Math.round(sdp)} ${ochok(Math.round(sdp))} × ${sdr.mult} = ${Math.round(sdp*sdr.mult)}`:'')}
+      ${tile('Чіп',sc_?CH[sc_][0]:'—',sc_?CH[sc_][1]:'без чіпа')}
+      ${tile('Заміни',sr?`${sr[7]||0}`:'—',sex?`штраф −${sex*10} (${sex} понад ліміт)`:sr&&(sr[9]===1||sr[9]===2)?'без ліміту (чіп)':`безкоштовних ${sr?sr[8]||0:'—'}`)}
+      ${tile('Бюджет на етапі',M(sr&&sr[6]),`вартість складу ${M(sr&&sr[4])}`)}
+    </div>`;
   return `<section class="panel fade">
     <div class="row sp"><div class="stack" style="gap:2px"><h2>${esc(t.n)}${t===MY?' <span class="mine-dot" style="font-size:11px;vertical-align:4px">МОЯ</span>':''}</h2><span class="sub">${esc(t.u)} · ${t.lr[LAST]} місце з ${T.length} після R${LAST}</span></div>
       <div class="ctrl"><div class="picker" style="min-width:260px"><label class="vh" for="tpq">Інша команда</label><input class="inp" id="tpq" type="search" style="width:100%;max-width:none" placeholder="Відкрити іншу команду" autocomplete="off"><ul id="tpl" hidden></ul></div>
-      ${t!==MY?`<button class="btn" type="button" id="tpmy">Зробити моєю</button>`:''}<button class="btn" type="button" data-rival="${t.i}" id="tprv">Додати в «Суперники»</button><button class="btn" type="button" data-card="${t.i}:${LAST}">Картка для скріну</button></div></div>
-    ${luHTML(rr,t.cur,LAST,true)}
+      ${t!==MY?`<button class="btn" type="button" id="tpmy">Зробити моєю</button>`:''}<button class="btn" type="button" data-rival="${t.i}" id="tprv">Додати в «Суперники»</button><button class="btn" type="button" data-card="${t.i}:${sm}">Картка для скріну R${sm}</button></div></div>
+    <h3 style="margin:6px 0 8px">Етап</h3>${raceStrip(sm,'tstrip')}
+    ${sr?luHTML(sr,sm===LAST?t.cur:null,sm,true):''}
+    ${stageTiles}
+    <h3 style="margin:18px 0 8px">Сезон · після R${LAST}</h3>
     <div class="tiles">
       ${tile('Місце',t.lr[LAST],PREV?(t.lr[PREV]-t.lr[LAST]>0?`▲${t.lr[PREV]-t.lr[LAST]} за етап`:t.lr[PREV]-t.lr[LAST]<0?`▼${t.lr[LAST]-t.lr[PREV]} за етап`:'без змін'):'',t.lr[LAST]===1?'purple':'')}
       ${tile('Всього',fmt(t.cum[LAST]),t.lr[LAST]===1?'лідер':`${fmt(t.cum[LAST]-STAT[LAST].lead)} до лідера`)}
@@ -1192,6 +1207,7 @@ function teamPage(){
 }
 function bindTeam(){
   const t=T[tp.i];
+  {const ts=$('#tstrip'); if(ts) ts.onclick=e=>{const b=e.target.closest('button[data-m]'); if(!b||b.disabled||b.dataset.m==='all') return; tp.m=+b.dataset.m; const y=scrollY; render(); scrollTo({top:y});};}
   const draw=()=>{const ms=rangeMds();
     mountBars($('#tc1'),{ms,vals:ms.map(m=>t.md[m]),avg:ms.map(m=>Math.round(STAT[m].avg)),best:ms.map(m=>STAT[m].max),mine:MY&&MY!==t?ms.map(m=>MY.md[m]):null,
       marks:ms.map(m=>{const c=chipOn(t,m); return c?CH[c][0]:'';}),
