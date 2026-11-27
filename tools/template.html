@@ -1809,7 +1809,13 @@ function cntHit(key){ if(!CNT_ON) return; try{fetch(`https://abacus.jasoncameron
 function cntInit(){ if(!CNT_ON||cur==='stats') return;
   const day=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Kiev'}).replace(/-/g,'');
   cntHit('views'); cntHit('views-'+day);
-  const last=store.get('seen',null); if(last!==day){ store.set('seen',day); cntHit('uniq-'+day); if(!last) cntHit('visitors'); } }
+  const last=store.get('seen',null); if(last!==day){ store.set('seen',day); cntHit('uniq-'+day); if(!last) cntHit('visitors'); }
+  const wk=isoWeek(day), mo=day.slice(0,6);
+  if(store.get('seenW',null)!==wk){ store.set('seenW',wk); cntHit('uniqw-'+wk); }
+  if(store.get('seenM',null)!==mo){ store.set('seenM',mo); cntHit('uniqm-'+mo); } }
+// ISO-тиждень для дати 'YYYYMMDD' → '2026W48'
+function isoWeek(ymd){ const d=new Date(Date.UTC(+ymd.slice(0,4),+ymd.slice(4,6)-1,+ymd.slice(6,8))); const dn=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dn+3);
+  const y=d.getUTCFullYear(), f=new Date(Date.UTC(y,0,4)); return y+'W'+String(1+Math.round(((d-f)/864e5-3+((f.getUTCDay()+6)%7))/7)).padStart(2,'0'); }
 function cntTab(){ if(!CNT_ON||cur==='stats'||cntSeen.has(cur)) return; cntSeen.add(cur); cntHit('tab-'+cur); }
 
 /* ---------- прихована сторінка статистики відвідувань (#stats, не в меню) ---------- */
@@ -1818,7 +1824,7 @@ const STATS_FROM='20261126';
 let stDays=14;
 function statsPage(){
   const nc=store.get('nocount',null)==='1';
-  return `<section class="panel fade"><div class="row sp"><div><h2>Відвідування сайту</h2><p class="sub">Сторінка не показується в меню — лише за посиланням. Облік ведеться з 26.11.2026, без cookie і без персональних даних. Дні — за київським часом.</p></div>
+  return `<section class="panel fade"><div class="row sp"><div><h2>Відвідування сайту</h2><p class="sub">Сторінка не показується в меню — лише за посиланням. Облік ведеться з 26.11.2026 (різні користувачі за тиждень і місяць — з 27.11), без cookie і без персональних даних. «Користувач» — це браузер: одна людина з телефона й комп'ютера рахується двічі. Дні — за київським часом.</p></div>
     <div class="tog" id="stdays">${[7,14,30].map(n=>`<button type="button" data-k="${n}" aria-pressed="${stDays===n}">${n} днів</button>`).join('')}</div></div>
     <div class="tiles" id="sttiles"><div class="tile"><small>Завантаження…</small><b>…</b></div></div></section>
    <section class="panel"><h2>По днях</h2><p class="sub">Перегляди — кожне відкриття сайту. Унікальні — різні браузери за день (кожен браузер рахується раз на добу).</p><div id="stchart"></div></section>
@@ -1836,7 +1842,8 @@ function bindStats(){
   const days=[]; for(let k=stDays-1;k>=0;k--){const d=new Date(Date.now()-k*864e5); const id=kyiv(d); if(id>=STATS_FROM) days.push({id,lab:d.toLocaleDateString('uk-UA',{day:'numeric',month:'short',timeZone:'Europe/Kiev'})});}
   const tabs=Object.keys(TABN);
   (async()=>{
-    const keys=['views','visitors',...days.flatMap(d=>['views-'+d.id,'uniq-'+d.id]),...tabs.map(t=>'tab-'+t)];
+    const today=kyiv(new Date()), wk=isoWeek(today), pwk=isoWeek(kyiv(new Date(Date.now()-7*864e5))), mo=today.slice(0,6), pmo=(()=>{const y=+mo.slice(0,4), m=+mo.slice(4); return m===1?`${y-1}12`:`${y}${String(m-1).padStart(2,'0')}`;})();
+    const keys=['views','visitors','uniqw-'+wk,'uniqw-'+pwk,'uniqm-'+mo,'uniqm-'+pmo,...days.flatMap(d=>['views-'+d.id,'uniq-'+d.id]),...tabs.map(t=>'tab-'+t)];
     const vals=await pool(keys,cntGet); if(!$('#sttiles')) return;
     if(vals.every(v=>v==null)){ $('#sttiles').innerHTML='<p class="empty" style="margin:0">Сервіс лічильника зараз недоступний. Спробуйте пізніше.</p>'; return; }
     const V=Object.fromEntries(keys.map((k,i)=>[k,vals[i]??0]));
@@ -1845,7 +1852,9 @@ function bindStats(){
     const tile=(k,v,sub)=>`<div class="tile"><small>${k}</small><b>${fmt(v)}</b><span>${sub}</span></div>`;
     $('#sttiles').innerHTML=tile('Сьогодні',td?V['uniq-'+td.id]:0,`унікальних · ${fmt(td?V['views-'+td.id]:0)} переглядів`)
       +(yd?tile('Вчора',V['uniq-'+yd.id],`унікальних · ${fmt(V['views-'+yd.id])} переглядів`):'')
-      +tile(`За ${days.length} ${plural(days.length,'день','дні','днів')}`,sum(du),`унікальних за днями · ${fmt(sum(dv))} переглядів`)
+      +tile('Різних користувачів цього тижня',V['uniqw-'+wk],`минулого тижня: ${pwk<'2026W48'?'—':fmt(V['uniqw-'+pwk])}`)
+      +tile('Різних користувачів цього місяця',V['uniqm-'+mo],`минулого місяця: ${pmo<'202611'?'—':fmt(V['uniqm-'+pmo])}`)
+      +tile(`Перегляди за ${days.length} ${plural(days.length,'день','дні','днів')}`,sum(dv),`сума денних унікальних: ${fmt(sum(du))}`)
       +tile('Усього відвідувачів',V['visitors'],`різних браузерів · ${fmt(V['views'])} переглядів`);
     // стовпчики по днях
     const W=Math.max(560,days.length*38),H=240,L=36,R=8,Tp=12,B=34, mx=Math.max(4,...dv,...du), st=niceStep(mx/4), ymax=Math.ceil(mx/st)*st, cw=(W-L-R)/Math.max(1,days.length), bw=cw*.36, y=v=>Tp+(ymax-v)*(H-Tp-B)/ymax;
@@ -1886,6 +1895,7 @@ $('#tabs').onclick=$('#ptabs').onclick=e=>{const b=e.target.closest('button[data
 $$('.modesw button').forEach(b=>b.onclick=()=>{const p=b.dataset.mode==='p'; if(p===isP(cur)) return; go(p?store.get('ptab','p-table'):store.get('ftab','board'));});
 const MYINIT=initMy();
 if(!Array.isArray(store.get('rivals',null))) rv.ids=defaultRivals();
+addEventListener('hashchange',()=>{const h=location.hash.slice(1); if(VIEWS[h]&&h!==cur){cur=h; render(); scrollTo({top:0});}});
 cntInit(); gaInit(); {const cs=$('#cookieset'); if(cs){cs.hidden=!gaReady; cs.onclick=e=>{e.preventDefault(); consentBar();};}}
 render();
 })();
