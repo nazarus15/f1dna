@@ -1812,11 +1812,27 @@ function cntInit(){ if(!CNT_ON||cur==='stats') return;
   const last=store.get('seen',null); if(last!==day){ store.set('seen',day); cntHit('uniq-'+day); if(!last) cntHit('visitors'); }
   const wk=isoWeek(day), mo=day.slice(0,6);
   if(store.get('seenW',null)!==wk){ store.set('seenW',wk); cntHit('uniqw-'+wk); }
-  if(store.get('seenM',null)!==mo){ store.set('seenM',mo); cntHit('uniqm-'+mo); } }
+  if(store.get('seenM',null)!==mo){ store.set('seenM',mo); cntHit('uniqm-'+mo); }
+  // коли: година й день тижня за Києвом, плюс година конкретного дня (теплова карта)
+  const kp=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Kiev',hour:'2-digit',hourCycle:'h23',weekday:'short'}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+  const hh=String(kp.hour).padStart(2,'0'), dow=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].indexOf(kp.weekday)+1;
+  cntHit('hour-'+hh); cntHit('dow-'+dow); cntHit('h-'+day+hh);
+  // з чого і звідки
+  const ua=navigator.userAgent||''; cntHit('dev-'+(/Mobi|Android|iPhone|iPad/.test(ua)||matchMedia('(pointer:coarse)').matches?'mobile':'desktop'));
+  let ref=''; try{ref=document.referrer?new URL(document.referrer).hostname:'';}catch(e){}
+  const src=/Telegram/i.test(ua)||/(^|\.)t\.me$|telegram/.test(ref)?'telegram':ref===location.hostname?'':!ref?'direct':/google\.|bing\.|duckduckgo\.|yandex\.|ecosia\./.test(ref)?'search':/instagram|facebook|threads|twitter|x\.com|reddit|tiktok|youtube/.test(ref)?'social':'other';
+  if(src) cntHit('src-'+src);
+  cntHit(last?'vis-back':'vis-new');
+  // скільки часу на сайті (видимий час, одне значення на відвідування)
+  const t0=Date.now(); let shown=0, vis=document.visibilityState==='visible'?t0:null, sent=false;
+  const durSend=()=>{ if(sent) return; if(vis){shown+=Date.now()-vis; vis=null;} const sec=shown/1000; sent=true;
+    cntHit('dur-'+(sec<10?'a10s':sec<60?'b1m':sec<180?'c3m':sec<600?'d10m':sec<1800?'e30m':'f30p')); };
+  addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'){ if(vis){shown+=Date.now()-vis; vis=null;} if(shown>0) durSend(); } else if(!sent) vis=Date.now(); });
+  addEventListener('pagehide',durSend); }
 // ISO-тиждень для дати 'YYYYMMDD' → '2026W48'
 function isoWeek(ymd){ const d=new Date(Date.UTC(+ymd.slice(0,4),+ymd.slice(4,6)-1,+ymd.slice(6,8))); const dn=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dn+3);
   const y=d.getUTCFullYear(), f=new Date(Date.UTC(y,0,4)); return y+'W'+String(1+Math.round(((d-f)/864e5-3+((f.getUTCDay()+6)%7))/7)).padStart(2,'0'); }
-function cntTab(){ if(!CNT_ON||cur==='stats'||cntSeen.has(cur)) return; cntSeen.add(cur); cntHit('tab-'+cur); }
+function cntTab(){ if(!CNT_ON||cur==='stats'||cntSeen.has(cur)) return; cntSeen.add(cur); cntHit('tab-'+cur); if(cntSeen.size===2) cntHit('depth-multi'); }
 
 /* ---------- прихована сторінка статистики відвідувань (#stats, не в меню) ---------- */
 const TABN={board:'Таблиця',team:'Команда',results:'Результати',analytics:'Аналітика',rivals:'Суперники',season:'Сезон',calendar:'Календар','p-table':'Predict · Таблиця','p-player':'Predict · Гравець','p-round':'Predict · Етап','p-dyn':'Predict · Динаміка','p-acc':'Predict · Очки і точність','p-rec':'Predict · Рекорди','p-duo':'Predict · Двоборство'};
@@ -1824,10 +1840,14 @@ const STATS_FROM='20261126';
 let stDays=14;
 function statsPage(){
   const nc=store.get('nocount',null)==='1';
-  return `<section class="panel fade"><div class="row sp"><div><h2>Відвідування сайту</h2><p class="sub">Сторінка не показується в меню — лише за посиланням. Облік ведеться з 26.11.2026 (різні користувачі за тиждень і місяць — з 27.11), без cookie і без персональних даних. «Користувач» — це браузер: одна людина з телефона й комп'ютера рахується двічі. Дні — за київським часом.</p></div>
+  return `<section class="panel fade"><div class="row sp"><div><h2>Відвідування сайту</h2><p class="sub">Сторінка не показується в меню — лише за посиланням. Облік ведеться з 26.11.2026 (різні користувачі за тиждень і місяць, час, пристрої, джерела й тривалість — з 27.11), без cookie і без персональних даних. «Користувач» — це браузер: одна людина з телефона й комп'ютера рахується двічі. Дні — за київським часом.</p></div>
     <div class="tog" id="stdays">${[7,14,30].map(n=>`<button type="button" data-k="${n}" aria-pressed="${stDays===n}">${n} днів</button>`).join('')}</div></div>
     <div class="tiles" id="sttiles"><div class="tile"><small>Завантаження…</small><b>…</b></div></div></section>
    <section class="panel"><h2>По днях</h2><p class="sub">Перегляди — кожне відкриття сайту. Унікальні — різні браузери за день (кожен браузер рахується раз на добу).</p><div id="stchart"></div></section>
+   <section class="panel"><h2>Коли заходять</h2><p class="sub">Відвідування за годинами доби й днями тижня (київський час), за весь час обліку.</p>
+    <div class="grid2"><div><h3>За годинами</h3><div id="sthour"></div></div><div><h3>За днями тижня</h3><div id="stdow"></div></div></div>
+    <h3 style="margin-top:14px">Теплова карта: останні 7 днів × година</h3><p class="sub">Чим темніша клітинка, тим більше відвідувань у цю годину. Наведи, щоб побачити число.</p><div id="stheat"><p class="mut">Завантаження…</p></div></section>
+   <section class="panel"><h2>Хто і як</h2><div class="grid2" id="stwho"><p class="mut">Завантаження…</p></div></section>
    <section class="panel"><h2>Популярність вкладок</h2><p class="sub">Скільки разів відкривали кожну вкладку (у межах одного відвідування — один раз). За весь час обліку.</p><div id="sttabs"></div></section>
    <section class="panel"><h2>Цей пристрій</h2><p class="sub">Щоб твої власні заходи не завищували статистику, вимкни облік на своїх пристроях (окремо на телефоні й комп'ютері).</p>
     <label class="chk" style="display:inline-flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="stnoc"${nc?' checked':''}> Не рахувати відвідування з цього браузера</label>
@@ -1835,6 +1855,48 @@ function statsPage(){
 }
 async function cntGet(key){ try{const r=await fetch(`https://abacus.jasoncameron.dev/get/${CNT_NS}/${key}`,{cache:'no-store'}); if(!r.ok) return 0; const j=await r.json(); return Math.max(0,+j.value||0);}catch(e){return null;} }
 async function pool(items,fn,n=6){const out=new Array(items.length); let i=0; await Promise.all(Array.from({length:n},async()=>{while(i<items.length){const k=i++; out[k]=await fn(items[k]);}})); return out;}
+
+const DOWN=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+function barsSVG(labels,vals,color,title,every=1){
+  const W=Math.max(420,labels.length*26),H=200,L=32,R=6,Tp=10,B=26, mx=Math.max(4,...vals), st=niceStep(mx/4), ymax=Math.ceil(mx/st)*st, cw=(W-L-R)/labels.length, y=v=>Tp+(ymax-v)*(H-Tp-B)/ymax;
+  let g=''; for(let v=0;v<=ymax+1e-9;v+=st) g+=`<line class="${v===0?'base':'gl'}" x1="${L}" x2="${W-R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${L-6}" y="${(y(v)+4).toFixed(1)}" text-anchor="end">${v}</text>`;
+  const bars=labels.map((lab,i)=>`<rect x="${(L+i*cw+cw*.15).toFixed(1)}" y="${y(vals[i]).toFixed(1)}" width="${(cw*.7).toFixed(1)}" height="${(y(0)-y(vals[i])).toFixed(1)}" rx="2" fill="${color}"/>`
+    +(i%every===0?`<text x="${(L+i*cw+cw/2).toFixed(1)}" y="${H-8}" text-anchor="middle">${esc(lab)}</text>`:'')
+    +`<rect class="hit" x="${(L+i*cw).toFixed(1)}" y="${Tp}" width="${cw.toFixed(1)}" height="${H-Tp-B}"${TT(title(i),[['Відвідувань',String(vals[i]),color]])}/>`).join('');
+  return `<div class="tw"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title(-1))}">${g}${bars}</svg></div>`;}
+async function renderWhen(){
+  const hrs=Array.from({length:24},(_,h)=>String(h).padStart(2,'0'));
+  const hv=await pool(hrs.map(h=>'hour-'+h),cntGet), dv=await pool([1,2,3,4,5,6,7].map(d=>'dow-'+d),cntGet); if(!$('#sthour')) return;
+  const H=hv.map(v=>v||0), Dw=dv.map(v=>v||0);
+  $('#sthour').innerHTML=barsSVG(hrs,H,'var(--s1)',i=>i<0?'Відвідування за годинами':`${hrs[i]}:00–${hrs[i]}:59`,3)
+    +`<p class="sub" style="margin-top:4px">${Math.max(...H)?`Пік: ${hrs[H.indexOf(Math.max(...H))]}:00–${hrs[H.indexOf(Math.max(...H))]}:59`:'Даних ще немає.'}</p>`;
+  $('#stdow').innerHTML=barsSVG(DOWN,Dw,'var(--s3)',i=>i<0?'Відвідування за днями тижня':DOWN[i])
+    +`<p class="sub" style="margin-top:4px">${Math.max(...Dw)?`Найактивніший день: ${DOWN[Dw.indexOf(Math.max(...Dw))]}`:'Даних ще немає.'}</p>`;
+  // теплова карта 7×24
+  const kyiv=d=>d.toLocaleDateString('sv-SE',{timeZone:'Europe/Kiev'}).replace(/-/g,'');
+  const days=[]; for(let k=6;k>=0;k--){const d=new Date(Date.now()-k*864e5); const id=kyiv(d); if(id>='20261127') days.push({id,lab:d.toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',timeZone:'Europe/Kiev'})});}
+  if(!days.length){ $('#stheat').innerHTML='<p class="empty">Даних ще немає.</p>'; return; }
+  const keys=days.flatMap(d=>hrs.map(h=>'h-'+d.id+h)); const vals=(await pool(keys,cntGet,8)).map(v=>v||0); if(!$('#stheat')) return;
+  const mx=Math.max(1,...vals), cell=22, L=74, Tp=18, W=L+24*cell+4, Hh=Tp+days.length*cell+4;
+  let svg=hrs.map((h,i)=>i%3===0?`<text x="${L+i*cell+cell/2}" y="12" text-anchor="middle">${h}</text>`:'').join('');
+  days.forEach((d,r)=>{svg+=`<text x="${L-8}" y="${Tp+r*cell+cell/2+4}" text-anchor="end">${esc(d.lab)}</text>`;
+    hrs.forEach((h,c)=>{const v=vals[r*24+c]; const a=v?0.15+0.85*(v/mx):0; svg+=`<rect x="${L+c*cell+1}" y="${Tp+r*cell+1}" width="${cell-2}" height="${cell-2}" rx="3" fill="${v?`rgba(42,120,214,${a.toFixed(2)})`:'var(--panel-2)'}"${TT(`${d.lab}, ${h}:00–${h}:59`,[['Відвідувань',String(v)]])}/>`;});});
+  $('#stheat').innerHTML=`<div class="tw"><svg class="chart" viewBox="0 0 ${W} ${Hh}" style="min-width:${W}px" role="img" aria-label="Теплова карта відвідувань">${svg}</svg></div>`;
+}
+async function renderWho(){
+  const groups=[
+    ['Пристрій',[['dev-mobile','Телефон'],['dev-desktop','Комп\'ютер']]],
+    ['Звідки прийшли',[['src-telegram','Telegram'],['src-direct','Напряму (закладка, посилання без джерела)'],['src-search','Пошук (Google тощо)'],['src-social','Соцмережі'],['src-other','Інші сайти']]],
+    ['Нові й ті, що повернулися',[['vis-new','Перше відвідування'],['vis-back','Повторне відвідування']]],
+    ['Скільки часу на сайті',[['dur-a10s','до 10 с'],['dur-b1m','10–60 с'],['dur-c3m','1–3 хв'],['dur-d10m','3–10 хв'],['dur-e30m','10–30 хв'],['dur-f30p','понад 30 хв']]],
+  ];
+  const keys=groups.flatMap(g=>g[1].map(x=>x[0])).concat(['depth-multi','views']); const vals=await pool(keys,cntGet); if(!$('#stwho')) return;
+  const V=Object.fromEntries(keys.map((k,i)=>[k,vals[i]||0]));
+  const tbl=([title,rows])=>{const tot=rows.reduce((a,[k])=>a+V[k],0); const mx=Math.max(1,...rows.map(([k])=>V[k]));
+    return `<div><h3>${title}</h3><div class="tw"><table class="t mini2"><tbody>${rows.map(([k,l])=>`<tr><td>${esc(l)}</td><td class="r num">${fmt(V[k])}</td><td class="r num mut" style="width:52px">${tot?Math.round(V[k]/tot*100)+'%':'—'}</td><td style="width:38%"><div style="height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden"><div style="height:100%;width:${(V[k]/mx*100).toFixed(1)}%;background:var(--s1)"></div></div></td></tr>`).join('')}</tbody></table></div></div>`;};
+  const visits=V['vis-new']+V['vis-back'];
+  $('#stwho').innerHTML=groups.map(tbl).join('')+`<div><h3>Глибина перегляду</h3><p style="margin:6px 0 0">${visits?`<b>${Math.round(V['depth-multi']/visits*100)}%</b> відвідувань відкривають 2 і більше вкладок (${fmt(V['depth-multi'])} з ${fmt(visits)}).`:'Даних ще немає.'}</p><p class="sub" style="margin-top:6px">Час на сайті рахується лише тоді, коли вкладка на екрані. Джерело «Telegram» визначається за вбудованим браузером Telegram і посиланням t.me; з десктопного Telegram посилання часто виглядає як «напряму».</p></div>`;
+}
 function bindStats(){
   $('#stdays').onclick=e=>{const b=e.target.closest('button[data-k]'); if(!b) return; stDays=+b.dataset.k; render();};
   $('#stnoc').onchange=e=>{const on=e.target.checked; store.set('nocount',on?'1':null); CNT_ON=!on&&/\.github\.io$/.test(location.hostname); $('#stnocmsg').textContent=on?'Облік на цьому пристрої вимкнено.':'Цей браузер зараз рахується.';};
@@ -1865,6 +1927,7 @@ function bindStats(){
     $('#stchart').innerHTML=days.length?`<div class="tw"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Відвідування по днях">${g}${bars}</svg></div><div class="legend"><span style="--c:var(--s1)"><i style="height:10px;width:10px"></i>Перегляди</span><span style="--c:var(--s2)"><i style="height:10px;width:10px"></i>Унікальні</span></div>`:'<p class="empty">Даних ще немає.</p>';
     // вкладки
     const tv=tabs.map(t=>[t,V['tab-'+t]]).sort((a,b)=>b[1]-a[1]); const tmx=Math.max(1,...tv.map(x=>x[1]));
+    renderWhen(); renderWho();
     $('#sttabs').innerHTML=`<div class="tw"><table class="t mini2"><thead><tr><th>Вкладка</th><th class="r">Відкриттів</th><th style="width:45%"><span class="vh">Частка</span></th></tr></thead><tbody>${tv.map(([t,v])=>`<tr><td>${esc(TABN[t])}</td><td class="r num">${fmt(v)}</td><td><div style="height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden"><div style="height:100%;width:${(v/tmx*100).toFixed(1)}%;background:${t.startsWith('p-')?'var(--purple)':'var(--s1)'}"></div></div></td></tr>`).join('')}</tbody></table></div>`;
   })();
 }
