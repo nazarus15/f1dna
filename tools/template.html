@@ -1804,22 +1804,70 @@ function cardPNG(){
 document.addEventListener('click',e=>{const b=e.target.closest('[data-card]'); if(!b) return; e.preventDefault(); const [i,m]=b.dataset.card.split(':'); openCard(+i,m?+m:null);});
 
 /* ---------- лічильник відвідувань (Abacus: без cookie, без персональних даних) ---------- */
-const CNT_NS='nazarus15-f1dna', CNT_ON=/\.github\.io$/.test(location.hostname); const cntSeen=new Set();
+const CNT_NS='nazarus15-f1dna'; let CNT_ON=/\.github\.io$/.test(location.hostname)&&store.get('nocount',null)!=='1'; const cntSeen=new Set();
 function cntHit(key){ if(!CNT_ON) return; try{fetch(`https://abacus.jasoncameron.dev/hit/${CNT_NS}/${key}`,{keepalive:true}).catch(()=>{});}catch(e){} }
-function cntInit(){ if(!CNT_ON) return;
+function cntInit(){ if(!CNT_ON||cur==='stats') return;
   const day=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Kiev'}).replace(/-/g,'');
   cntHit('views'); cntHit('views-'+day);
   const last=store.get('seen',null); if(last!==day){ store.set('seen',day); cntHit('uniq-'+day); if(!last) cntHit('visitors'); } }
-function cntTab(){ if(!CNT_ON||cntSeen.has(cur)) return; cntSeen.add(cur); cntHit('tab-'+cur); }
+function cntTab(){ if(!CNT_ON||cur==='stats'||cntSeen.has(cur)) return; cntSeen.add(cur); cntHit('tab-'+cur); }
+
+/* ---------- прихована сторінка статистики відвідувань (#stats, не в меню) ---------- */
+const TABN={board:'Таблиця',team:'Команда',results:'Результати',analytics:'Аналітика',rivals:'Суперники',season:'Сезон',calendar:'Календар','p-table':'Predict · Таблиця','p-player':'Predict · Гравець','p-round':'Predict · Етап','p-dyn':'Predict · Динаміка','p-acc':'Predict · Очки і точність','p-rec':'Predict · Рекорди','p-duo':'Predict · Двоборство'};
+const STATS_FROM='20261126';
+let stDays=14;
+function statsPage(){
+  const nc=store.get('nocount',null)==='1';
+  return `<section class="panel fade"><div class="row sp"><div><h2>Відвідування сайту</h2><p class="sub">Сторінка не показується в меню — лише за посиланням. Облік ведеться з 26.11.2026, без cookie і без персональних даних. Дні — за київським часом.</p></div>
+    <div class="tog" id="stdays">${[7,14,30].map(n=>`<button type="button" data-k="${n}" aria-pressed="${stDays===n}">${n} днів</button>`).join('')}</div></div>
+    <div class="tiles" id="sttiles"><div class="tile"><small>Завантаження…</small><b>…</b></div></div></section>
+   <section class="panel"><h2>По днях</h2><p class="sub">Перегляди — кожне відкриття сайту. Унікальні — різні браузери за день (кожен браузер рахується раз на добу).</p><div id="stchart"></div></section>
+   <section class="panel"><h2>Популярність вкладок</h2><p class="sub">Скільки разів відкривали кожну вкладку (у межах одного відвідування — один раз). За весь час обліку.</p><div id="sttabs"></div></section>
+   <section class="panel"><h2>Цей пристрій</h2><p class="sub">Щоб твої власні заходи не завищували статистику, вимкни облік на своїх пристроях (окремо на телефоні й комп'ютері).</p>
+    <label class="chk" style="display:inline-flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="stnoc"${nc?' checked':''}> Не рахувати відвідування з цього браузера</label>
+    <p class="sub" id="stnocmsg" style="margin-top:6px">${nc?'Облік на цьому пристрої вимкнено.':'Цей браузер зараз рахується.'}</p></section>`;
+}
+async function cntGet(key){ try{const r=await fetch(`https://abacus.jasoncameron.dev/get/${CNT_NS}/${key}`,{cache:'no-store'}); if(!r.ok) return 0; const j=await r.json(); return Math.max(0,+j.value||0);}catch(e){return null;} }
+async function pool(items,fn,n=6){const out=new Array(items.length); let i=0; await Promise.all(Array.from({length:n},async()=>{while(i<items.length){const k=i++; out[k]=await fn(items[k]);}})); return out;}
+function bindStats(){
+  $('#stdays').onclick=e=>{const b=e.target.closest('button[data-k]'); if(!b) return; stDays=+b.dataset.k; render();};
+  $('#stnoc').onchange=e=>{const on=e.target.checked; store.set('nocount',on?'1':null); CNT_ON=!on&&/\.github\.io$/.test(location.hostname); $('#stnocmsg').textContent=on?'Облік на цьому пристрої вимкнено.':'Цей браузер зараз рахується.';};
+  const kyiv=d=>d.toLocaleDateString('sv-SE',{timeZone:'Europe/Kiev'}).replace(/-/g,'');
+  const days=[]; for(let k=stDays-1;k>=0;k--){const d=new Date(Date.now()-k*864e5); const id=kyiv(d); if(id>=STATS_FROM) days.push({id,lab:d.toLocaleDateString('uk-UA',{day:'numeric',month:'short',timeZone:'Europe/Kiev'})});}
+  const tabs=Object.keys(TABN);
+  (async()=>{
+    const keys=['views','visitors',...days.flatMap(d=>['views-'+d.id,'uniq-'+d.id]),...tabs.map(t=>'tab-'+t)];
+    const vals=await pool(keys,cntGet); if(!$('#sttiles')) return;
+    if(vals.every(v=>v==null)){ $('#sttiles').innerHTML='<p class="empty" style="margin:0">Сервіс лічильника зараз недоступний. Спробуйте пізніше.</p>'; return; }
+    const V=Object.fromEntries(keys.map((k,i)=>[k,vals[i]??0]));
+    const dv=days.map(d=>V['views-'+d.id]), du=days.map(d=>V['uniq-'+d.id]); const sum=a=>a.reduce((x,y)=>x+y,0);
+    const td=days[days.length-1], yd=days[days.length-2];
+    const tile=(k,v,sub)=>`<div class="tile"><small>${k}</small><b>${fmt(v)}</b><span>${sub}</span></div>`;
+    $('#sttiles').innerHTML=tile('Сьогодні',td?V['uniq-'+td.id]:0,`унікальних · ${fmt(td?V['views-'+td.id]:0)} переглядів`)
+      +(yd?tile('Вчора',V['uniq-'+yd.id],`унікальних · ${fmt(V['views-'+yd.id])} переглядів`):'')
+      +tile(`За ${days.length} ${plural(days.length,'день','дні','днів')}`,sum(du),`унікальних за днями · ${fmt(sum(dv))} переглядів`)
+      +tile('Усього відвідувачів',V['visitors'],`різних браузерів · ${fmt(V['views'])} переглядів`);
+    // стовпчики по днях
+    const W=Math.max(560,days.length*38),H=240,L=36,R=8,Tp=12,B=34, mx=Math.max(4,...dv,...du), st=niceStep(mx/4), ymax=Math.ceil(mx/st)*st, cw=(W-L-R)/Math.max(1,days.length), bw=cw*.36, y=v=>Tp+(ymax-v)*(H-Tp-B)/ymax;
+    let g=''; for(let v=0;v<=ymax+1e-9;v+=st) g+=`<line class="${v===0?'base':'gl'}" x1="${L}" x2="${W-R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${L-6}" y="${(y(v)+4).toFixed(1)}" text-anchor="end">${v}</text>`;
+    const bars=days.map((d,i)=>{const x0=L+i*cw+cw*.14; return `<rect x="${x0.toFixed(1)}" y="${y(dv[i]).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0)-y(dv[i])).toFixed(1)}" rx="2" fill="var(--s1)"/><rect x="${(x0+bw+2).toFixed(1)}" y="${y(du[i]).toFixed(1)}" width="${bw.toFixed(1)}" height="${(y(0)-y(du[i])).toFixed(1)}" rx="2" fill="var(--s2)"/>`
+      +(days.length<=16||i%2===0?`<text x="${(L+i*cw+cw/2).toFixed(1)}" y="${H-12}" text-anchor="middle">${esc(d.lab)}</text>`:'')
+      +`<rect class="hit" x="${(L+i*cw).toFixed(1)}" y="${Tp}" width="${cw.toFixed(1)}" height="${H-Tp-B}"${TT(d.lab,[['Перегляди',String(dv[i]),'var(--s1)'],['Унікальні',String(du[i]),'var(--s2)']])}/>`;}).join('');
+    $('#stchart').innerHTML=days.length?`<div class="tw"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Відвідування по днях">${g}${bars}</svg></div><div class="legend"><span style="--c:var(--s1)"><i style="height:10px;width:10px"></i>Перегляди</span><span style="--c:var(--s2)"><i style="height:10px;width:10px"></i>Унікальні</span></div>`:'<p class="empty">Даних ще немає.</p>';
+    // вкладки
+    const tv=tabs.map(t=>[t,V['tab-'+t]]).sort((a,b)=>b[1]-a[1]); const tmx=Math.max(1,...tv.map(x=>x[1]));
+    $('#sttabs').innerHTML=`<div class="tw"><table class="t mini2"><thead><tr><th>Вкладка</th><th class="r">Відкриттів</th><th style="width:45%"><span class="vh">Частка</span></th></tr></thead><tbody>${tv.map(([t,v])=>`<tr><td>${esc(TABN[t])}</td><td class="r num">${fmt(v)}</td><td><div style="height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden"><div style="height:100%;width:${(v/tmx*100).toFixed(1)}%;background:${t.startsWith('p-')?'var(--purple)':'var(--s1)'}"></div></div></td></tr>`).join('')}</tbody></table></div>`;
+  })();
+}
 
 /* ---------- router ---------- */
-const VIEWS={board:[board,bindBoard],team:[teamPage,bindTeam],results:[results,bindResults],analytics:[analytics,bindAnalytics],rivals:[rivals,bindRivals],season:[season,bindSeason],'p-table':[predictor,bindPredictor],'p-round':[predictor,bindPredictor],'p-dyn':[predictor,bindPredictor],'p-acc':[predictor,bindPredictor],'p-player':[playerP,bindPlayerP],'p-rec':[predictor,bindPredictor],'p-duo':[predictor,bindPredictor],/* builder:[builder,bindBuilder] — вкладка прихована */calendar:[calendar,()=>{}]};
+const VIEWS={stats:[statsPage,bindStats],board:[board,bindBoard],team:[teamPage,bindTeam],results:[results,bindResults],analytics:[analytics,bindAnalytics],rivals:[rivals,bindRivals],season:[season,bindSeason],'p-table':[predictor,bindPredictor],'p-round':[predictor,bindPredictor],'p-dyn':[predictor,bindPredictor],'p-acc':[predictor,bindPredictor],'p-player':[playerP,bindPlayerP],'p-rec':[predictor,bindPredictor],'p-duo':[predictor,bindPredictor],/* builder:[builder,bindBuilder] — вкладка прихована */calendar:[calendar,()=>{}]};
 let cur=(location.hash||'').slice(1); if(cur==='predictor') cur='p-table'; if(!VIEWS[cur]) cur=store.get('tab','board'); if(cur==='predictor') cur='p-table'; if(!VIEWS[cur]) cur='board';
 const isP=t=>t.startsWith('p-');
 function render(){ hideTip(); $('#app').onclick=null; const [v,b]=VIEWS[cur]; $('#app').innerHTML=v(); b(); gaView(); cntTab();
   const pm=isP(cur); document.body.classList.toggle('mode-p',pm);
   // перший візит у режим (або збережена команда/профіль більше не існує) — попросити обрати
-  if(modal.hidden&&!askedNow[pm?'p':'f']){const sv=store.get(pm?'pmy':'my',null);
+  if(cur!=='stats'&&modal.hidden&&!askedNow[pm?'p':'f']){const sv=store.get(pm?'pmy':'my',null);
     const need=pm?(!PMY&&sv===null)||(!PMY&&sv!==''&&sv!==null):(!MY&&!MYINIT.qp&&(sv===null||sv!==''));
     if(need){askedNow[pm?'p':'f']=true; setTimeout(()=>openPicker(pm),0);}}
   $('#tabs').hidden=pm; $('#ptabs').hidden=!pm; if(pm) pmyInit(); updMyBtn();
